@@ -1,0 +1,363 @@
+<%- include('header', { title: '文件浏览器', activePage: 'files' }) %>
+
+<div class="container-fluid pt-3">
+  <div class="row mb-3">
+    <div class="col">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb bg-light py-2 px-3 rounded">
+          <li class="breadcrumb-item"><a href="/files"><i class="bi bi-hdd"></i> 此电脑</a></li>
+          <% if (currentPath) { 
+            let parts = currentPath.split('\\');
+            let currentBuildPath = '';
+            parts.forEach((part, index) => {
+              if (part) {
+                currentBuildPath += part;
+                if (index < parts.length - 1) currentBuildPath += '\\';
+                %>
+                <li class="breadcrumb-item <%= (index === parts.length - 1) ? 'active' : '' %>">
+                  <% if (index === parts.length - 1) { %>
+                    <%= part %>
+                  <% } else { %>
+                    <a href="/files?path=<%= encodeURIComponent(currentBuildPath) %>"><%= part %></a>
+                  <% } %>
+                </li>
+              <% }
+            });
+          } %>
+        </ol>
+      </nav>
+    </div>
+    <div class="col-auto">
+      <div class="btn-group">
+        <a href="/files" class="btn btn-outline-primary">
+          <i class="bi bi-house"></i> 此电脑
+        </a>
+        <% if (parentPath) { %>
+          <a href="/files?path=<%= encodeURIComponent(parentPath) %>" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-up"></i> 上级目录
+          </a>
+        <% } %>
+        <button class="btn btn-outline-secondary" id="copyPath">
+          <i class="bi bi-clipboard"></i> 复制路径
+        </button>
+        <% if (currentPath) { %>
+          <button class="btn btn-success" id="selectFolder">
+            <i class="bi bi-check-circle"></i> 选择此文件夹
+          </button>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- 左侧导航栏 -->
+    <div class="col-md-3 mb-3">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <i class="bi bi-folder"></i> 快速访问
+        </div>
+        <div class="list-group list-group-flush">
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir) %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-person text-primary"></i> 用户文件夹
+          </a>
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Desktop') %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-display text-success"></i> 桌面
+          </a>
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Documents') %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-file-earmark-text text-warning"></i> 文档
+          </a>
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Downloads') %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-download text-danger"></i> 下载
+          </a>
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Pictures') %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-images text-info"></i> 图片
+          </a>
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Music') %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-music-note-beamed text-primary"></i> 音乐
+          </a>
+          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Videos') %>" class="list-group-item list-group-item-action">
+            <i class="bi bi-film text-danger"></i> 视频
+          </a>
+        </div>
+        
+        <div class="card-header bg-primary text-white mt-2">
+          <i class="bi bi-hdd"></i> 设备和驱动器
+        </div>
+        <div class="list-group list-group-flush">
+          <% if (systemInfo.platform === 'win32') { %>
+            <% for (let i = 67; i <= 90; i++) { 
+              const driveLetter = String.fromCharCode(i) + ':';
+              try {
+                if (require('fs').existsSync(driveLetter + '\\')) { %>
+                  <a href="/files?path=<%= encodeURIComponent(driveLetter + '\\') %>" class="list-group-item list-group-item-action">
+                    <i class="bi bi-hdd-fill text-secondary"></i> 
+                    本地磁盘 (<%= driveLetter %>)
+                  </a>
+                <% }
+              } catch (e) {} 
+            } %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧文件列表 -->
+    <div class="col-md-9">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <span id="currentPath" class="d-none"><%= currentPath %></span>
+            <strong><i class="bi bi-folder-fill text-warning"></i> <%= currentPath ? currentPath.split('\\').pop() || currentPath : '此电脑' %></strong>
+          </div>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" id="viewMode" title="切换视图">
+              <i class="bi bi-grid"></i>
+            </button>
+            <button class="btn btn-outline-secondary" title="刷新" onclick="location.reload()">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <% if (items.length === 0) { %>
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-folder-x display-1"></i>
+              <p class="mt-3">此文件夹为空</p>
+            </div>
+          <% } else { %>
+            <div class="file-grid" id="fileContainer">
+              <% items.forEach(item => { %>
+                <div class="file-item <%= item.isDirectory ? 'file-directory' : 'file-file' %>" 
+                     data-path="<%= item.path %>" 
+                     title="<%= item.name %>">
+                  <div class="file-icon">
+                    <% if (item.isDirectory) { %>
+                      <i class="bi bi-folder-fill text-warning"></i>
+                    <% } else { 
+                      let iconClass = 'bi-file-earmark text-primary';
+                      const ext = item.name.split('.').pop().toLowerCase();
+                      
+                      if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-image text-success';
+                      } else if (['doc', 'docx', 'rtf', 'txt', 'md'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-text text-primary';
+                      } else if (['xls', 'xlsx', 'csv'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-spreadsheet text-success';
+                      } else if (['ppt', 'pptx'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-slides text-danger';
+                      } else if (['pdf'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-pdf text-danger';
+                      } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-zip text-warning';
+                      } else if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-music text-info';
+                      } else if (['mp4', 'avi', 'mov', 'wmv', 'mkv', 'flv'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-play text-danger';
+                      } else if (['js', 'ts', 'html', 'css', 'jsx', 'php', 'py', 'java', 'c', 'cpp', 'cs'].includes(ext)) {
+                        iconClass = 'bi-file-earmark-code text-primary';
+                      }
+                    %>
+                      <i class="bi <%= iconClass %>"></i>
+                    <% } %>
+                  </div>
+                  <div class="file-name">
+                    <%= item.name %>
+                  </div>
+                  <div class="file-info text-muted small">
+                    <% if (item.isDirectory) { %>
+                      文件夹
+                    <% } else if (item.restricted) { %>
+                      系统文件
+                    <% } else { %>
+                      <%= formatFileSize(item.size) %>
+                    <% } %>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .file-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .file-item:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .file-icon {
+    font-size: 2rem;
+    margin-bottom: 5px;
+  }
+  
+  .file-name {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+  
+  .file-info {
+    width: 100%;
+    font-size: 0.75rem;
+  }
+  
+  /* 列表视图 */
+  .list-view {
+    display: block;
+  }
+  
+  .list-view .file-item {
+    display: grid;
+    grid-template-columns: 40px 1fr 100px;
+    text-align: left;
+    margin-bottom: 5px;
+    padding: 5px;
+  }
+  
+  .list-view .file-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0;
+  }
+  
+  .breadcrumb {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 处理文件/文件夹点击
+    const fileItems = document.querySelectorAll('.file-item');
+    fileItems.forEach(item => {
+      item.addEventListener('click', function() {
+        const path = this.getAttribute('data-path');
+        if (this.classList.contains('file-directory')) {
+          window.location.href = `/files?path=${encodeURIComponent(path)}`;
+        } else {
+          // 如果是从配置页面打开的，则返回并填充路径
+          if (window.opener && window.opener.document.getElementById('watchPath')) {
+            window.opener.document.getElementById('watchPath').value = path;
+            window.close();
+          } else {
+            // 否则复制路径
+            navigator.clipboard.writeText(path)
+              .then(() => {
+                const toast = document.createElement('div');
+                toast.className = 'toast position-fixed bottom-0 end-0 m-3';
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                toast.innerHTML = `
+                  <div class="toast-header">
+                    <i class="bi bi-clipboard-check me-2 text-success"></i>
+                    <strong class="me-auto">文件路径</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                  </div>
+                  <div class="toast-body">
+                    已复制文件路径到剪贴板
+                  </div>
+                `;
+                document.body.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                
+                setTimeout(() => {
+                  toast.remove();
+                }, 3000);
+              });
+          }
+        }
+      });
+    });
+    
+    // 复制当前路径
+    const copyPathBtn = document.getElementById('copyPath');
+    const currentPath = document.getElementById('currentPath');
+    
+    if (copyPathBtn && currentPath) {
+      copyPathBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigator.clipboard.writeText(currentPath.textContent)
+          .then(() => {
+            this.innerHTML = '<i class="bi bi-check"></i> 已复制';
+            setTimeout(() => {
+              this.innerHTML = '<i class="bi bi-clipboard"></i> 复制路径';
+            }, 2000);
+          })
+          .catch(err => {
+            console.error('复制失败:', err);
+          });
+      });
+    }
+    
+    // 选择当前文件夹
+    const selectFolderBtn = document.getElementById('selectFolder');
+    if (selectFolderBtn) {
+      selectFolderBtn.addEventListener('click', function() {
+        const currentPathEl = document.getElementById('currentPath');
+        if (currentPathEl) {
+          // 保存选择的路径到localStorage
+          localStorage.setItem('selectedPath', currentPathEl.textContent);
+          
+          // 关闭当前窗口，返回到项目创建页面
+          window.close();
+        }
+      });
+    }
+    
+    // 切换视图模式
+    const viewModeBtn = document.getElementById('viewMode');
+    const fileContainer = document.getElementById('fileContainer');
+    
+    if (viewModeBtn && fileContainer) {
+      // 检查本地存储中的视图模式设置
+      const viewMode = localStorage.getItem('fileViewMode') || 'grid';
+      
+      // 应用初始视图模式
+      if (viewMode === 'list') {
+        fileContainer.classList.add('list-view');
+        viewModeBtn.innerHTML = '<i class="bi bi-grid"></i>';
+      } else {
+        viewModeBtn.innerHTML = '<i class="bi bi-list"></i>';
+      }
+      
+      viewModeBtn.addEventListener('click', function() {
+        if (fileContainer.classList.contains('list-view')) {
+          // 切换到网格视图
+          fileContainer.classList.remove('list-view');
+          this.innerHTML = '<i class="bi bi-list"></i>';
+          localStorage.setItem('fileViewMode', 'grid');
+        } else {
+          // 切换到列表视图
+          fileContainer.classList.add('list-view');
+          this.innerHTML = '<i class="bi bi-grid"></i>';
+          localStorage.setItem('fileViewMode', 'list');
+        }
+      });
+    }
+  });
+</script>
+
+<%- include('footer') %> 

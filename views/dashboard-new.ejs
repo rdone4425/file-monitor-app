@@ -1,0 +1,713 @@
+<%- include('header', { title: '项目管理', activePage: 'dashboard' }) %>
+
+<div class="container-fluid pt-3">
+  <div class="row mb-3">
+    <div class="col">
+      <h3 class="mb-0"><i class="bi bi-folder-plus"></i> 项目管理</h3>
+    </div>
+    <div class="col-auto">
+      <% if (config.isConfigured) { %>
+        <button type="button" class="btn btn-primary" onclick="toggleForm(true); return false;">
+          <i class="bi bi-plus-lg"></i> 新建项目
+        </button>
+      <% } else { %>
+        <a href="/config" class="btn btn-primary">
+          <i class="bi bi-gear-fill"></i> 配置应用
+        </a>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (!config.isConfigured) { %>
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+      <div class="me-3">
+        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+      </div>
+      <div>
+        <h4 class="alert-heading">需要配置!</h4>
+        <p>请先配置 GitHub Token 和用户名才能开始使用。</p>
+        <a href="/config" class="btn btn-warning">
+          <i class="bi bi-gear-fill"></i> 立即配置
+        </a>
+      </div>
+    </div>
+  <% } else { %>
+    <!-- 新建项目表单 - 默认隐藏 -->
+    <div id="project-form" style="display: none;" class="mb-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+          <h5 class="mb-0 text-white"><i class="bi bi-plus-circle"></i> 新建项目</h5>
+          <button type="button" class="btn-close btn-close-white" onclick="toggleForm(false)"></button>
+        </div>
+        <div class="card-body">
+          <form id="newProjectForm" class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="projectName" class="form-label">项目名称 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="projectName" required>
+              </div>
+              <div class="mb-3">
+                <label for="projectPath" class="form-label">本地路径 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="projectPath" required>
+                  <button class="btn btn-primary" type="button" id="browseBtn">
+                    <i class="bi bi-folder2"></i> 浏览
+                  </button>
+                </div>
+                <div class="form-text">要监控的本地文件夹路径</div>
+              </div>
+              <div class="mb-3">
+                <label for="projectRepo" class="form-label">GitHub 仓库 <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <span class="input-group-text"><%= config.githubUsername %>/</span>
+                  <input type="text" class="form-control" id="projectRepo" required>
+                </div>
+                <div class="form-text">目标 GitHub 仓库名称</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="projectBranch" class="form-label">分支名</label>
+                <input type="text" class="form-control" id="projectBranch" placeholder="main">
+                <div class="form-text">默认为 main 分支</div>
+              </div>
+              <div class="mb-3">
+                <label for="projectCommitMsg" class="form-label">提交消息模板</label>
+                <input type="text" class="form-control" id="projectCommitMsg" placeholder="Auto-commit: 文件更新">
+                <div class="form-text">自动提交时使用的消息模板</div>
+              </div>
+              <div class="mb-3">
+                <label for="projectIgnored" class="form-label">忽略的文件模式</label>
+                <input type="text" class="form-control" id="projectIgnored" placeholder="node_modules,.git,*.tmp">
+                <div class="form-text">逗号分隔的要忽略的文件模式</div>
+              </div>
+              <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="startMonitoringNow" checked>
+                <label class="form-check-label" for="startMonitoringNow">
+                  创建后立即开始监控
+                </label>
+              </div>
+            </div>
+            <div class="col-12 mt-3 d-flex justify-content-end">
+              <button type="button" class="btn btn-secondary me-2" onclick="toggleForm(false)">取消</button>
+              <button type="button" class="btn btn-primary" id="saveBtn">创建项目</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 项目列表 -->
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <i class="bi bi-kanban"></i> 我的项目
+          </div>
+          <div class="input-group input-group-sm w-25">
+            <input type="text" class="form-control" placeholder="搜索项目..." id="projectSearch">
+            <button class="btn btn-outline-light" type="button">
+              <i class="bi bi-search"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <% if (monitoringTasks.length === 0) { %>
+          <div class="text-center py-5">
+            <img src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/icons/folder-plus.svg" width="64" height="64" class="mb-3 text-muted">
+            <h5>还没有创建任何项目</h5>
+            <p class="text-muted">点击右上角的"新建项目"按钮来创建您的第一个项目</p>
+            <button type="button" class="btn btn-primary" onclick="toggleForm(true); return false;">
+              <i class="bi bi-plus-lg"></i> 新建项目
+            </button>
+          </div>
+        <% } else { %>
+          <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" id="projectsList">
+            <% monitoringTasks.forEach(project => { %>
+              <div class="col" data-project-id="<%= project.id %>">
+                <div class="card h-100 project-card" data-project-id="<%= project.id %>">
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                      <span class="badge rounded-pill <%= project.status === 'active' ? 'bg-success' : 'bg-secondary' %> me-2">
+                        <%= project.status === 'active' ? '监控中' : '已停止' %>
+                      </span>
+                      <span><%= project.name %></span>
+                    </div>
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#"><i class="bi bi-pencil me-2"></i>编辑</a></li>
+                        <li><a class="dropdown-item" href="/files?path=<%= encodeURIComponent(project.path) %>"><i class="bi bi-folder2-open me-2"></i>浏览文件</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item create-file" href="#" data-project-id="<%= project.id %>"><i class="bi bi-file-earmark-plus me-2"></i>创建文件</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger delete-project" href="#"><i class="bi bi-trash me-2"></i>删除</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-2">
+                      <small class="text-muted">本地路径:</small>
+                      <div class="text-truncate">
+                        <i class="bi bi-folder2 text-primary"></i> 
+                        <%= project.path %>
+                      </div>
+                    </div>
+                    <div class="mb-2">
+                      <small class="text-muted">GitHub 仓库:</small>
+                      <div>
+                        <i class="bi bi-github"></i> 
+                        <%= project.repo %>
+                      </div>
+                    </div>
+                    <div>
+                      <small class="text-muted">最后更新:</small>
+                      <div><%= project.lastUpdate %></div>
+                    </div>
+                  </div>
+                  <div class="card-footer d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm <%= project.status === 'active' ? 'btn-danger' : 'btn-success' %> project-toggle" 
+                            onclick="toggleProject('<%= project.id %>')">
+                      <i class="bi <%= project.status === 'active' ? 'bi-stop-fill' : 'bi-play-fill' %>"></i>
+                      <%= project.status === 'active' ? '停止' : '启动' %>
+                    </button>
+                    <a href="https://github.com/<%= config.githubUsername %>/<%= project.repo %>" target="_blank" class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-github"></i> 查看仓库
+                    </a>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<!-- 编辑项目模态框 -->
+<div class="modal fade" id="editProjectModal" tabindex="-1" aria-labelledby="editProjectModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProjectModalLabel">编辑项目</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editProjectForm" class="row">
+          <input type="hidden" id="editProjectId">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="editProjectName" class="form-label">项目名称 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="editProjectName" required>
+            </div>
+            <div class="mb-3">
+              <label for="editProjectPath" class="form-label">本地路径 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="editProjectPath" required>
+                <button class="btn btn-primary" type="button" id="editBrowseBtn">
+                  <i class="bi bi-folder2"></i> 浏览
+                </button>
+              </div>
+              <div class="form-text">要监控的本地文件夹路径</div>
+            </div>
+            <div class="mb-3">
+              <label for="editProjectRepo" class="form-label">GitHub 仓库 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><%= config.githubUsername %>/</span>
+                <input type="text" class="form-control" id="editProjectRepo" required>
+              </div>
+              <div class="form-text">目标 GitHub 仓库名称</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="editProjectBranch" class="form-label">分支名</label>
+              <input type="text" class="form-control" id="editProjectBranch" placeholder="main">
+              <div class="form-text">默认为 main 分支</div>
+            </div>
+            <div class="mb-3">
+              <label for="editProjectCommitMsg" class="form-label">提交消息模板</label>
+              <input type="text" class="form-control" id="editProjectCommitMsg" placeholder="Auto-commit: 文件更新">
+              <div class="form-text">自动提交时使用的消息模板</div>
+            </div>
+            <div class="mb-3">
+              <label for="editProjectIgnored" class="form-label">忽略的文件模式</label>
+              <input type="text" class="form-control" id="editProjectIgnored" placeholder="node_modules,.git,*.tmp">
+              <div class="form-text">逗号分隔的要忽略的文件模式</div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="updateProjectBtn">保存修改</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 创建文件模态框 -->
+<div class="modal fade" id="createFileModal" tabindex="-1" aria-labelledby="createFileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createFileModalLabel">创建文件</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createFileForm">
+          <input type="hidden" id="createFileProjectId">
+          <div class="mb-3">
+            <label for="createFileName" class="form-label">文件名称 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="createFileName" required>
+            <div class="form-text">例如: example.txt, document.md</div>
+          </div>
+          <div class="mb-3">
+            <label for="createFileContent" class="form-label">文件内容</label>
+            <textarea class="form-control" id="createFileContent" rows="10"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="saveFileBtn">创建并上传</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 页面加载时先隐藏表单
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('project-form');
+    if (form) {
+      form.style.display = 'none';
+    }
+  });
+  
+  // 简单的表单显示/隐藏函数
+  function toggleForm(show = true) {
+    console.log('toggleForm 被调用，show =', show);
+    const form = document.getElementById('project-form');
+    if (!form) {
+      console.error('找不到表单元素!');
+      return;
+    }
+    
+    console.log('表单当前显示状态:', form.style.display);
+    form.style.display = show ? 'block' : 'none';
+    console.log('表单新的显示状态:', form.style.display);
+    
+    if (show) {
+      form.scrollIntoView({behavior: 'smooth'});
+    }
+  }
+  
+  // 浏览按钮
+  document.getElementById('browseBtn').addEventListener('click', function() {
+    const filePickerWindow = window.open('/files', '选择项目文件夹', 'width=1000,height=700');
+    
+    // 检测文件选择器窗口关闭事件
+    const checkWindowClosed = setInterval(() => {
+      if (filePickerWindow.closed) {
+        clearInterval(checkWindowClosed);
+        
+        // 从localStorage中获取选择的路径
+        const selectedPath = localStorage.getItem('selectedPath');
+        if (selectedPath) {
+          document.getElementById('projectPath').value = selectedPath;
+          localStorage.removeItem('selectedPath');
+        }
+      }
+    }, 500);
+  });
+  
+  // 创建项目
+  document.getElementById('saveBtn').addEventListener('click', async function() {
+    const form = document.getElementById('newProjectForm');
+    
+    // 验证表单
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    // 禁用按钮，显示加载状态
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 创建中...';
+    
+    try {
+      // 准备项目数据
+      const projectData = {
+        name: document.getElementById('projectName').value,
+        path: document.getElementById('projectPath').value,
+        repo: document.getElementById('projectRepo').value,
+        branch: document.getElementById('projectBranch').value,
+        commitMessage: document.getElementById('projectCommitMsg').value,
+        ignoredPatterns: document.getElementById('projectIgnored').value,
+        startNow: document.getElementById('startMonitoringNow').checked
+      };
+      
+      // 发送创建项目请求
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectData)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // 刷新页面显示新项目
+        window.location.reload();
+      } else {
+        // 显示错误消息
+        alert('创建失败: ' + (result.error || '创建项目时发生错误'));
+      }
+    } catch (error) {
+      alert('请求错误: ' + error.message);
+    } finally {
+      // 恢复按钮状态
+      this.disabled = false;
+      this.innerHTML = '创建项目';
+    }
+  });
+  
+  // 切换项目状态
+  async function toggleProject(projectId) {
+    try {
+      const projectCard = document.querySelector(`[data-project-id="${projectId}"]`);
+      if (!projectCard) return;
+      
+      const toggleBtn = projectCard.querySelector('.project-toggle');
+      const statusBadge = projectCard.querySelector('.badge');
+      const oldStatus = toggleBtn.classList.contains('btn-danger') ? 'active' : 'stopped';
+      
+      // 禁用按钮，显示加载状态
+      toggleBtn.disabled = true;
+      toggleBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+      
+      // 发送请求切换项目状态
+      const response = await fetch(`/api/projects/${projectId}/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // 更新UI状态
+        if (oldStatus === 'active') {
+          toggleBtn.classList.remove('btn-danger');
+          toggleBtn.classList.add('btn-success');
+          toggleBtn.innerHTML = '<i class="bi bi-play-fill"></i> 启动';
+          statusBadge.classList.remove('bg-success');
+          statusBadge.classList.add('bg-secondary');
+          statusBadge.textContent = '已停止';
+          
+          alert('项目 "' + result.project.name + '" 监控已停止');
+        } else {
+          toggleBtn.classList.remove('btn-success');
+          toggleBtn.classList.add('btn-danger');
+          toggleBtn.innerHTML = '<i class="bi bi-stop-fill"></i> 停止';
+          statusBadge.classList.remove('bg-secondary');
+          statusBadge.classList.add('bg-success');
+          statusBadge.textContent = '监控中';
+          
+          alert('项目 "' + result.project.name + '" 监控已启动');
+        }
+      } else {
+        // 恢复原始状态
+        toggleBtn.innerHTML = `<i class="bi ${oldStatus === 'active' ? 'bi-stop-fill' : 'bi-play-fill'}"></i> ${oldStatus === 'active' ? '停止' : '启动'}`;
+        alert('操作失败: ' + (result.error || '切换项目状态失败'));
+      }
+    } catch (error) {
+      alert('请求错误: ' + error.message);
+    } finally {
+      // 恢复按钮状态
+      const projectCard = document.querySelector(`[data-project-id="${projectId}"]`);
+      if (projectCard) {
+        const toggleBtn = projectCard.querySelector('.project-toggle');
+        toggleBtn.disabled = false;
+      }
+    }
+  }
+  
+  // 为删除按钮添加事件
+  document.querySelectorAll('.delete-project').forEach(btn => {
+    btn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      const projectCard = this.closest('.col');
+      const projectId = projectCard.getAttribute('data-project-id');
+      
+      if (!confirm('确定要删除这个项目吗？此操作不可撤销。')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/projects/${projectId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          projectCard.remove();
+          alert('项目已成功删除');
+          
+          // 如果没有项目了，刷新页面显示空状态
+          const projectsList = document.getElementById('projectsList');
+          if (projectsList && projectsList.children.length === 0) {
+            window.location.reload();
+          }
+        } else {
+          alert('删除失败: ' + (result.error || '删除项目失败'));
+        }
+      } catch (error) {
+        alert('请求错误: ' + error.message);
+      }
+    });
+  });
+  
+  // 项目搜索功能
+  const searchInput = document.getElementById('projectSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const projectCards = document.querySelectorAll('.project-card');
+      
+      projectCards.forEach(card => {
+        const projectName = card.querySelector('.card-header span:nth-child(2)').textContent.toLowerCase();
+        const projectPath = card.querySelector('.card-body .text-truncate').textContent.toLowerCase();
+        const projectRepo = card.querySelector('.card-body .mb-2:nth-child(2) div').textContent.toLowerCase();
+        
+        if (projectName.includes(searchTerm) || projectPath.includes(searchTerm) || projectRepo.includes(searchTerm)) {
+          card.closest('.col').style.display = '';
+        } else {
+          card.closest('.col').style.display = 'none';
+        }
+      });
+    });
+  }
+  
+  // 创建文件功能
+  const createFileModal = new bootstrap.Modal(document.getElementById('createFileModal'));
+  
+  // 为创建文件按钮添加事件处理程序
+  document.querySelectorAll('.create-file').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      const projectId = this.getAttribute('data-project-id');
+      const projectCard = document.querySelector(`.project-card[data-project-id="${projectId}"]`);
+      
+      if (projectCard) {
+        // 获取项目信息
+        fetch(`/api/projects/${projectId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const project = data.project;
+              
+              // 设置项目ID
+              document.getElementById('createFileProjectId').value = projectId;
+              
+              // 清空表单
+              document.getElementById('createFileName').value = '';
+              document.getElementById('createFileContent').value = '';
+              
+              // 显示模态框
+              createFileModal.show();
+            } else {
+              alert('获取项目信息失败: ' + (data.error || '未知错误'));
+            }
+          })
+          .catch(error => {
+            alert('请求错误: ' + error.message);
+          });
+      }
+    });
+  });
+  
+  // 保存文件按钮
+  document.getElementById('saveFileBtn').addEventListener('click', async function() {
+    const form = document.getElementById('createFileForm');
+    
+    // 验证表单
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    // 禁用按钮，显示加载状态
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 创建中...';
+    
+    try {
+      const projectId = document.getElementById('createFileProjectId').value;
+      const fileName = document.getElementById('createFileName').value;
+      const fileContent = document.getElementById('createFileContent').value;
+      
+      // 发送创建文件请求
+      const response = await fetch(`/api/projects/${projectId}/files`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fileName,
+          fileContent
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // 隐藏模态框
+        createFileModal.hide();
+        
+        // 显示成功消息
+        alert(`文件 "${fileName}" 已成功创建并上传到 GitHub`);
+      } else {
+        // 显示错误消息
+        alert('创建文件失败: ' + (result.error || '创建文件时发生错误'));
+      }
+    } catch (error) {
+      alert('请求错误: ' + error.message);
+    } finally {
+      // 恢复按钮状态
+      this.disabled = false;
+      this.innerHTML = '创建并上传';
+    }
+  });
+  
+  // 编辑项目功能
+  const editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+  
+  // 为编辑按钮添加事件处理程序
+  document.querySelectorAll('.dropdown-item').forEach(item => {
+    if (item.textContent.includes('编辑')) {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const projectCard = this.closest('.project-card');
+        const projectId = projectCard.getAttribute('data-project-id');
+        
+        // 获取项目数据
+        fetch(`/api/projects/${projectId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const project = data.project;
+              
+              // 填充表单
+              document.getElementById('editProjectId').value = project.id;
+              document.getElementById('editProjectName').value = project.name;
+              document.getElementById('editProjectPath').value = project.path;
+              document.getElementById('editProjectRepo').value = project.repo;
+              document.getElementById('editProjectBranch').value = project.branch || 'main';
+              document.getElementById('editProjectCommitMsg').value = project.commitMessage || 'Auto-commit: 文件更新';
+              document.getElementById('editProjectIgnored').value = project.ignoredPatterns || 'node_modules,.git,*.tmp';
+              
+              // 显示模态框
+              editModal.show();
+            } else {
+              alert('获取项目信息失败: ' + (data.error || '未知错误'));
+            }
+          })
+          .catch(error => {
+            alert('请求错误: ' + error.message);
+          });
+      });
+    }
+  });
+  
+  // 编辑浏览按钮
+  document.getElementById('editBrowseBtn').addEventListener('click', function() {
+    const filePickerWindow = window.open('/files', '选择项目文件夹', 'width=1000,height=700');
+    
+    // 检测文件选择器窗口关闭事件
+    const checkWindowClosed = setInterval(() => {
+      if (filePickerWindow.closed) {
+        clearInterval(checkWindowClosed);
+        
+        // 从localStorage中获取选择的路径
+        const selectedPath = localStorage.getItem('selectedPath');
+        if (selectedPath) {
+          document.getElementById('editProjectPath').value = selectedPath;
+          localStorage.removeItem('selectedPath');
+        }
+      }
+    }, 500);
+  });
+  
+  // 保存项目修改
+  document.getElementById('updateProjectBtn').addEventListener('click', async function() {
+    const form = document.getElementById('editProjectForm');
+    
+    // 验证表单
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    // 禁用按钮，显示加载状态
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 保存中...';
+    
+    try {
+      const projectId = document.getElementById('editProjectId').value;
+      
+      // 准备项目数据
+      const projectData = {
+        name: document.getElementById('editProjectName').value,
+        path: document.getElementById('editProjectPath').value,
+        repo: document.getElementById('editProjectRepo').value,
+        branch: document.getElementById('editProjectBranch').value,
+        commitMessage: document.getElementById('editProjectCommitMsg').value,
+        ignoredPatterns: document.getElementById('editProjectIgnored').value
+      };
+      
+      // 发送更新项目请求
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectData)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // 隐藏模态框
+        editModal.hide();
+        
+        // 刷新页面显示更新后的项目
+        window.location.reload();
+      } else {
+        // 显示错误消息
+        alert('更新失败: ' + (result.error || '更新项目时发生错误'));
+      }
+    } catch (error) {
+      alert('请求错误: ' + error.message);
+    } finally {
+      // 恢复按钮状态
+      this.disabled = false;
+      this.innerHTML = '保存修改';
+    }
+  });
+</script>
+
+<%- include('footer') %> 

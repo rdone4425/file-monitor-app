@@ -1,0 +1,440 @@
+<%- include('header', { title: 'GitHub 仓库', activePage: 'repos' }) %>
+
+<div class="container pt-4">
+  <div class="row mb-4">
+    <div class="col">
+      <h2>GitHub 仓库</h2>
+      <p class="text-muted">管理您的 GitHub 仓库信息</p>
+    </div>
+    <div class="col-auto">
+      <div class="d-flex align-items-center">
+        <div class="form-check form-switch me-2">
+          <input class="form-check-input" type="checkbox" id="autoSaveSwitch" <%= typeof autoSave !== 'undefined' && autoSave ? 'checked' : '' %>>
+          <label class="form-check-label" for="autoSaveSwitch">自动保存仓库信息</label>
+        </div>
+        <button id="refreshWithAutoSave" class="btn btn-primary btn-sm">
+          <i class="bi bi-arrow-clockwise"></i> 刷新并保存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 搜索框 -->
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <form id="searchForm" class="d-flex" action="/repos" method="GET">
+        <input type="hidden" name="autoSave" value="<%= typeof autoSave !== 'undefined' && autoSave ? 'true' : 'false' %>">
+        <input type="hidden" name="page" value="1">
+        <input type="text" class="form-control me-2" name="search" placeholder="搜索仓库..." value="<%= typeof search !== 'undefined' ? search : '' %>">
+        <button class="btn btn-outline-primary" type="submit">
+          <i class="bi bi-search"></i> 搜索
+        </button>
+      </form>
+    </div>
+    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+      <% if (typeof pagination !== 'undefined' && pagination.totalRepos) { %>
+        <span class="badge bg-info">
+          总计: <%= pagination.totalRepos %> 个仓库
+          <% if (typeof search !== 'undefined' && search) { %>
+            (匹配 "<%= search %>")
+          <% } %>
+        </span>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-danger" role="alert">
+      <%= error %>
+    </div>
+  <% } %>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">已保存的仓库</h5>
+      <button class="btn btn-success btn-sm" id="addNewRepo">
+        <i class="bi bi-plus-circle"></i> 添加仓库
+      </button>
+    </div>
+    <div class="card-body">
+      <% if (savedRepos && savedRepos.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>仓库名</th>
+                <th>描述</th>
+                <th>保存时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% savedRepos.forEach(repo => { %>
+                <tr>
+                  <td><%= repo.name %></td>
+                  <td><%= repo.description || '无描述' %></td>
+                  <td><%= new Date(repo.savedAt).toLocaleString() %></td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <a href="<%= repo.url %>" target="_blank" class="btn btn-outline-secondary">
+                        <i class="bi bi-github"></i> GitHub
+                      </a>
+                      <button class="btn btn-outline-primary select-repo" data-repo-name="<%= repo.name %>">
+                        <i class="bi bi-folder2-open"></i> 选择
+                      </button>
+                      <button class="btn btn-outline-danger delete-repo" data-repo-name="<%= repo.name %>">
+                        <i class="bi bi-trash"></i> 删除
+      </button>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info">
+          没有保存的仓库信息。点击"添加仓库"按钮添加仓库信息，或者使用"刷新并保存"按钮自动获取您的GitHub仓库信息。
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+      <% if (repos && repos.length > 0) { %>
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">可添加的GitHub仓库</h5>
+      </div>
+      <div class="card-body">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+          <% repos.forEach(repo => { %>
+            <% if (!savedRepos.some(r => r.name === repo.name)) { %>
+            <div class="col">
+              <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                  <h5 class="card-title mb-0"><%= repo.name %></h5>
+                  <span class="badge bg-warning text-dark">
+                    <i class="bi bi-star-fill"></i> <%= repo.stars %>
+                  </span>
+                </div>
+                <div class="card-body">
+                  <p class="card-text"><%= repo.description || '无描述' %></p>
+                </div>
+                <div class="card-footer">
+                  <div class="d-flex justify-content-between">
+                    <a href="<%= repo.url %>" target="_blank" class="btn btn-outline-secondary btn-sm">
+                      <i class="bi bi-github"></i> 查看
+                    </a>
+                      <button class="btn btn-primary btn-sm save-repo" 
+                              data-repo-name="<%= repo.name %>" 
+                              data-repo-url="<%= repo.url %>"
+                              data-repo-clone-url="<%= repo.cloneUrl %>"
+                              data-repo-description="<%= repo.description || '' %>">
+                        <i class="bi bi-save"></i> 保存
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+          <% }) %>
+        </div>
+        
+        <!-- 分页控件 -->
+        <% if (typeof pagination !== 'undefined') { %>
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <div>
+              <% if (pagination.page > 1) { %>
+                <a href="/repos?page=<%= pagination.page - 1 %>&perPage=<%= pagination.perPage %>&search=<%= typeof search !== 'undefined' ? search : '' %>&autoSave=<%= typeof autoSave !== 'undefined' && autoSave ? 'true' : 'false' %>" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-chevron-left"></i> 上一页
+                </a>
+      <% } else { %>
+                <button class="btn btn-outline-secondary btn-sm" disabled>
+                  <i class="bi bi-chevron-left"></i> 上一页
+                </button>
+      <% } %>
+              
+              <% if (pagination.hasMorePages) { %>
+                <a href="/repos?page=<%= pagination.page + 1 %>&perPage=<%= pagination.perPage %>&search=<%= typeof search !== 'undefined' ? search : '' %>&autoSave=<%= typeof autoSave !== 'undefined' && autoSave ? 'true' : 'false' %>" class="btn btn-outline-primary btn-sm ms-2">
+                  下一页 <i class="bi bi-chevron-right"></i>
+                </a>
+              <% } else { %>
+                <button class="btn btn-outline-secondary btn-sm ms-2" disabled>
+                  下一页 <i class="bi bi-chevron-right"></i>
+                </button>
+              <% } %>
+              </div>
+            
+            <div>
+              <span class="text-muted">
+                第 <%= pagination.page %> 页
+                <% if (pagination.totalRepos) { %>
+                  (共 <%= Math.ceil(pagination.totalRepos / pagination.perPage) %> 页)
+                <% } %>
+              </span>
+            </div>
+            
+            <div class="d-flex align-items-center">
+              <label for="perPageSelect" class="form-label me-2 mb-0">每页显示:</label>
+              <select class="form-select form-select-sm" id="perPageSelect" style="width: auto;">
+                <option value="20" <%= pagination.perPage == 20 ? 'selected' : '' %>>20</option>
+                <option value="50" <%= pagination.perPage == 50 ? 'selected' : '' %>>50</option>
+                <option value="100" <%= pagination.perPage == 100 ? 'selected' : '' %>>100</option>
+              </select>
+        </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<!-- 保存进度模态框 -->
+<div class="modal fade" id="saveModal" tabindex="-1" aria-labelledby="saveModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="saveModalLabel">保存仓库信息</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>正在保存仓库信息: <strong id="savingRepo"></strong></p>
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 添加仓库模态框 -->
+<div class="modal fade" id="addRepoModal" tabindex="-1" aria-labelledby="addRepoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addRepoModalLabel">添加仓库信息</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addRepoForm">
+          <div class="mb-3">
+            <label for="repoName" class="form-label">仓库名称 <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="repoName" required>
+          </div>
+          <div class="mb-3">
+            <label for="repoUrl" class="form-label">仓库URL <span class="text-danger">*</span></label>
+            <input type="url" class="form-control" id="repoUrl" placeholder="https://github.com/username/repo" required>
+          </div>
+          <div class="mb-3">
+            <label for="repoCloneUrl" class="form-label">克隆URL</label>
+            <input type="url" class="form-control" id="repoCloneUrl" placeholder="https://github.com/username/repo.git">
+            <div class="form-text">如果留空，将自动根据仓库URL生成</div>
+          </div>
+          <div class="mb-3">
+            <label for="repoDescription" class="form-label">描述</label>
+            <textarea class="form-control" id="repoDescription" rows="3"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" id="saveNewRepo">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 保存仓库功能
+    const saveBtns = document.querySelectorAll('.save-repo');
+    const saveModal = new bootstrap.Modal(document.getElementById('saveModal'));
+    const savingRepoEl = document.getElementById('savingRepo');
+    
+    console.log('仓库保存按钮数量:', saveBtns.length);
+    
+    // 自动保存功能
+    const autoSaveSwitch = document.getElementById('autoSaveSwitch');
+    const refreshWithAutoSaveBtn = document.getElementById('refreshWithAutoSave');
+    
+    // 点击刷新并保存按钮
+    refreshWithAutoSaveBtn.addEventListener('click', function() {
+      const autoSave = autoSaveSwitch.checked;
+      const currentSearch = new URLSearchParams(window.location.search).get('search') || '';
+      window.location.href = `/repos?autoSave=${autoSave}&search=${encodeURIComponent(currentSearch)}`;
+    });
+    
+    // 每页显示数量变化
+    const perPageSelect = document.getElementById('perPageSelect');
+    if (perPageSelect) {
+      perPageSelect.addEventListener('change', function() {
+        const perPage = this.value;
+        const currentSearch = new URLSearchParams(window.location.search).get('search') || '';
+        const autoSave = autoSaveSwitch.checked;
+        window.location.href = `/repos?page=1&perPage=${perPage}&search=${encodeURIComponent(currentSearch)}&autoSave=${autoSave}`;
+      });
+    }
+    
+    // 添加仓库功能
+    const addNewRepoBtn = document.getElementById('addNewRepo');
+    const addRepoModal = new bootstrap.Modal(document.getElementById('addRepoModal'));
+    const saveNewRepoBtn = document.getElementById('saveNewRepo');
+    
+    // 点击添加仓库按钮
+    addNewRepoBtn.addEventListener('click', function() {
+      document.getElementById('addRepoForm').reset();
+      addRepoModal.show();
+    });
+    
+    // 点击保存新仓库按钮
+    saveNewRepoBtn.addEventListener('click', function() {
+      const repoName = document.getElementById('repoName').value.trim();
+      const repoUrl = document.getElementById('repoUrl').value.trim();
+      const repoCloneUrl = document.getElementById('repoCloneUrl').value.trim() || repoUrl + '.git';
+      const repoDescription = document.getElementById('repoDescription').value.trim();
+      
+      if (!repoName || !repoUrl) {
+        alert('请填写必填字段！');
+        return;
+      }
+      
+      // 隐藏添加模态框，显示保存进度模态框
+      addRepoModal.hide();
+      savingRepoEl.textContent = repoName;
+      saveModal.show();
+      
+      // 发送保存请求
+      fetch('/save-repo-info', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          repoName, 
+          repoUrl, 
+          cloneUrl: repoCloneUrl, 
+          description: repoDescription 
+        }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        saveModal.hide();
+        
+        if (data.success) {
+          alert('仓库 ' + repoName + ' 信息保存成功！');
+          // 重新加载页面以显示新添加的仓库
+          window.location.reload();
+        } else {
+          alert('保存失败: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('保存请求错误:', error);
+        saveModal.hide();
+        alert('保存请求错误: ' + error);
+      });
+    });
+    
+    // 删除仓库功能
+    const deleteBtns = document.querySelectorAll('.delete-repo');
+    
+    deleteBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const repoName = this.getAttribute('data-repo-name');
+        
+        if (confirm(`确定要删除仓库 "${repoName}" 的信息吗？`)) {
+          fetch('/delete-repo-info', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ repoName }),
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('仓库 ' + repoName + ' 信息已删除！');
+              // 重新加载页面以更新仓库列表
+              window.location.reload();
+            } else {
+              alert('删除失败: ' + data.error);
+            }
+          })
+          .catch(error => {
+            console.error('删除请求错误:', error);
+            alert('删除请求错误: ' + error);
+          });
+        }
+      });
+    });
+    
+    // 保存单个仓库
+    saveBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const repoName = this.getAttribute('data-repo-name');
+        const repoUrl = this.getAttribute('data-repo-url');
+        const cloneUrl = this.getAttribute('data-repo-clone-url');
+        const description = this.getAttribute('data-repo-description');
+        
+        console.log('点击保存仓库:', repoName, repoUrl);
+        
+        // 显示保存进度模态框
+        savingRepoEl.textContent = repoName;
+        saveModal.show();
+        
+        // 发送保存请求
+        fetch('/save-repo-info', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ repoName, repoUrl, cloneUrl, description }),
+        })
+        .then(response => {
+          console.log('保存请求响应状态:', response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log('保存请求响应数据:', data);
+          
+          if (data.success) {
+            // 保存成功
+            saveModal.hide();
+            
+            // 显示成功消息
+            alert('仓库 ' + repoName + ' 信息保存成功！');
+            
+            // 重新加载页面以显示已保存的仓库
+              window.location.reload();
+          } else {
+            // 保存失败
+            saveModal.hide();
+            alert('保存失败: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('保存请求错误:', error);
+          saveModal.hide();
+          alert('保存请求错误: ' + error);
+        });
+      });
+    });
+    
+    // 选择仓库功能
+    const selectRepoBtns = document.querySelectorAll('.select-repo');
+    
+    selectRepoBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const repoName = this.getAttribute('data-repo-name');
+        
+        // 如果是从配置页面打开的，则返回并填充 GitHub 仓库名
+        if (window.opener && window.opener.document.getElementById('githubRepo')) {
+          window.opener.document.getElementById('githubRepo').value = repoName;
+          window.close();
+        }
+      });
+    });
+  });
+</script>
+
+<%- include('footer') %> 

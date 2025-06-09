@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: file-monitor-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./projects.json:/app/projects.json
+      - ./repos-info.json:/app/repos-info.json
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+      # 挂载您需要监控的目录（根据实际情况修改）
+      - ${WATCH_DIR:-./watched}:/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # 您可以在这里设置环境变量，也可以使用.env文件
+      # - GITHUB_TOKEN=your_github_token
+      # - GITHUB_USERNAME=your_github_username 

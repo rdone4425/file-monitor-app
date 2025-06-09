@@ -1,0 +1,60 @@
+/* 侧边栏修复样式 */
+.sidebar {
+  display: block !important;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  padding: 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  width: 250px;
+}
+
+.main-content {
+  margin-left: 250px;
+  padding-top: 1.5rem;
+}
+
+/* 确保 Bootstrap 图标正确加载 */
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css");
+
+/* 确保侧边栏内容正确显示 */
+.sidebar .nav-link {
+  font-weight: 500;
+  color: #333;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar .nav-link i {
+  margin-right: 10px;
+}
+
+.sidebar .nav-link.active {
+  color: #007bff;
+  background-color: rgba(0, 123, 255, 0.1);
+  border-left: 4px solid #007bff;
+}
+
+.app-title {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  text-align: center;
+}
+
+/* 移动设备适配 */
+@media (max-width: 767.98px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+  
+  .main-content {
+    margin-left: 0;
+  }
+} 
