@@ -8,6 +8,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# 创建必要的目录
+RUN mkdir -p /app/logs /app/watched
+
 # 复制应用源代码
 COPY . .
 
@@ -15,19 +18,8 @@ COPY . .
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 创建必要的目录
-RUN mkdir -p /app/logs /app/watched
-
-# 添加entrypoint脚本并确保它有正确的行尾格式
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
-    chmod +x /usr/local/bin/docker-entrypoint.sh
-
 # 暴露端口
 EXPOSE 3000
 
-# 设置entrypoint
-ENTRYPOINT ["docker-entrypoint.sh"]
-
-# 启动命令
-CMD ["npm", "start"] 
+# 添加初始化代码到应用程序启动前
+CMD ["node", "src/web-server.js"] 

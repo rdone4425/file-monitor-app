@@ -1,21 +1,60 @@
-# 文件监控自动上传 GitHub 工具
+# 文件监控应用
 
-这是一个用 Node.js 开发的应用程序，可以监控本地文件或文件夹的变化，并通过 GitHub API 自动将这些变化上传到 GitHub 仓库。
+这个应用程序可以监控本地文件变化，并自动将变化的文件上传到GitHub仓库。
 
-## 功能特点
+## 功能特性
 
-- 实时监控指定目录的文件变化
-- 使用 GitHub API 自动上传文件变更
-- 使用 Token 和用户名严格认证
-- 支持防抖设置，避免频繁上传
-- 完整的日志记录
-- 可通过 Docker 部署
+- 实时监控指定目录中的文件变化
+- 自动将变化的文件上传到GitHub仓库
+- 支持多个监控项目，可以同时监控多个目录
+- Web界面管理监控项目和查看状态
+- 支持浏览和管理GitHub仓库
 
-## 安装
+## 系统要求
 
-### 本地安装
+- Node.js 18+
+- Docker (可选，用于容器化部署)
 
-1. 克隆仓库：
+## 安装方法
+
+### 使用Docker（推荐）
+
+1. 克隆此仓库：
+   ```bash
+   git clone https://github.com/yourusername/file-monitor-app.git
+   cd file-monitor-app
+   ```
+
+2. 创建环境变量文件：
+   ```bash
+   cp env.example .env
+   ```
+
+3. 编辑`.env`文件，设置你的GitHub凭据和其他配置：
+   ```bash
+   # GitHub 配置
+   GITHUB_TOKEN=your_personal_access_token
+   GITHUB_USERNAME=your_github_username
+   GITHUB_REPO=your_repo_name
+   GITHUB_BRANCH=main
+   
+   # 要监控的路径
+   WATCH_PATH=/app/watched
+   ```
+
+4. 启动Docker容器：
+   ```bash
+   docker-compose up -d
+   ```
+
+5. 访问Web界面：
+   ```bash
+   http://localhost:3000
+   ```
+
+### 无Docker安装
+
+1. 克隆此仓库：
    ```bash
    git clone https://github.com/yourusername/file-monitor-app.git
    cd file-monitor-app
@@ -26,101 +65,66 @@
    npm install
    ```
 
-3. 创建环境变量文件 `.env`：
-   ```
-   # 要监控的路径
-   WATCH_PATH=/path/to/watch
-   
-   # GitHub 配置
-   GITHUB_TOKEN=your_personal_access_token
-   GITHUB_USERNAME=your_github_username
-   GITHUB_REPO=your_repo_name
-   GITHUB_BRANCH=main
-   
-   # 自动提交消息
-   COMMIT_MESSAGE=Auto-commit: 文件更新
-   
-   # 忽略的文件/文件夹模式（逗号分隔）
-   IGNORED_PATTERNS=node_modules,.git,*.tmp
-   
-   # 防抖时间（毫秒）
-   DEBOUNCE_TIME=2000
-   
-   # 日志级别 (error, warn, info, verbose, debug, silly)
-   LOG_LEVEL=info
+3. 创建环境变量文件：
+   ```bash
+   cp env.example .env
    ```
 
-4. 启动应用：
+4. 编辑`.env`文件，设置你的GitHub凭据和其他配置。
+
+5. 启动应用：
    ```bash
    npm start
    ```
 
-### Docker 安装
+6. 访问Web界面：
+   ```bash
+   http://localhost:3000
+   ```
 
-#### 构建镜像
+## Docker容器说明
 
-```bash
-docker build -t file-monitor-app .
-```
+本应用使用Node.js 18 Alpine作为基础镜像，不需要任何额外的shell脚本即可运行。应用程序初始化逻辑已经内置到Node.js代码中，简化了部署过程。
 
-#### 运行容器
+### 容器挂载卷
 
-```bash
-# 基本运行命令（映射3000端口）
-docker run -d --name file-monitor-app -p 3000:3000 file-monitor-app
+Docker Compose配置中包含以下挂载卷：
 
-# 如果要挂载本地目录到容器中
-docker run -d --name file-monitor-app \
-  -p 3000:3000 \
-  -v /本地路径/watched:/app/watched \
-  -v /本地路径/logs:/app/logs \
-  file-monitor-app
+- `./projects.json:/app/projects.json` - 保存监控项目配置
+- `./repos-info.json:/app/repos-info.json` - 保存GitHub仓库信息
+- `./logs:/app/logs` - 存储应用日志
+- `./.env:/app/.env` - 环境变量配置
+- `./watched:/app/watched` - 默认监控目录
 
-# 如果要设置环境变量
-docker run -d --name file-monitor-app \
-  -p 3000:3000 \
-  -e GITHUB_TOKEN=your_github_token \
-  -e GITHUB_USERNAME=your_github_username \
-  file-monitor-app
-```
-
-#### 使用 Docker Compose
+你可以通过设置`WATCH_DIR`环境变量来更改监控目录的挂载：
 
 ```bash
-docker-compose up -d
+WATCH_DIR=/path/to/your/files docker-compose up -d
 ```
 
-## 使用说明
+## 使用方法
 
-1. 获取 GitHub 个人访问令牌（Personal Access Token）:
-   - 访问 GitHub 设置页面: https://github.com/settings/tokens
-   - 点击 "Generate new token"
-   - 选择 "repo" 作用域（允许完全访问仓库）
-   - 生成并复制令牌字符串
-   - 将令牌字符串添加到 `.env` 文件中的 `GITHUB_TOKEN` 变量
+1. 访问Web界面 `http://localhost:3000`
+2. 使用"添加项目"按钮创建新的监控项目
+3. 设置项目名称、监控路径、GitHub仓库和分支
+4. 启动监控
+5. 任何在监控路径中的文件变化将自动上传到GitHub
 
-2. 配置要监控的目录和 GitHub 仓库信息：
-   - 设置 `WATCH_PATH` 为你想要监控的本地目录
-   - 设置 `GITHUB_USERNAME` 为你的 GitHub 用户名
-   - 设置 `GITHUB_REPO` 为你要上传文件的仓库名称
+## GitHub权限
 
-3. 启动应用后，它将开始监控指定目录。当文件发生变化时，变化会自动上传到 GitHub 仓库。
+应用需要一个有足够权限访问和修改仓库的个人访问令牌(PAT)。你的Token至少需要以下权限：
 
-## 安全说明
+- `repo` - 完整的仓库访问权限
 
-- 本应用使用 GitHub 个人访问令牌进行认证，这是一种安全的认证方式
-- 应用会验证令牌的有效性，并确认令牌所属的用户与配置的用户名匹配
-- 为了保护你的令牌安全，请确保：
-  - 不要将包含令牌的 `.env` 文件提交到版本控制系统
-  - 给予令牌最小必要的权限（只需要 "repo" 作用域）
-  - 定期轮换令牌
+## 疑难解答
 
-## 注意事项
+如果应用无法启动或不能正常工作，请检查：
 
-- 为了避免频繁上传，应用使用了防抖机制，默认情况下会在最后一次文件变化后等待 2 秒再进行上传
-- 如果监控大型目录，请适当调整 `IGNORED_PATTERNS` 来排除不需要监控的文件/文件夹
-- GitHub API 有速率限制，如果你频繁上传大量文件，可能会触发限制
+1. `.env`文件中的配置是否正确
+2. 日志文件(`logs/error.log`和`logs/combined.log`)中的错误信息
+3. 确保监控的目录存在且有正确的权限
+4. 验证GitHub Token是否有效且拥有足够的权限
 
-## 许可证
+## 许可
 
 MIT 

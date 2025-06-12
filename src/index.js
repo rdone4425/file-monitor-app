@@ -136,15 +136,22 @@ async function startMonitoring() {
 }
 
 async function main() {
-  // 启动 Web 服务器
-  const webPort = process.env.WEB_PORT || 3000;
-  const server = startServer(webPort);
-  
-  // 尝试启动文件监控
-  const monitoringStarted = await startMonitoring();
-  
-  if (!monitoringStarted) {
-    logger.info('文件监控未启动，请通过 Web 界面完成配置');
+  try {
+    // 启动 Web 服务器
+    const webPort = process.env.WEB_PORT || 3000;
+    await startServer(webPort);
+    
+    // 尝试启动文件监控
+    const monitoringStarted = await startMonitoring();
+    
+    if (!monitoringStarted) {
+      logger.info('文件监控未启动，请通过 Web 界面完成配置');
+    }
+    
+    logger.info(`Web 服务器已启动，访问 http://localhost:${webPort}`);
+  } catch (error) {
+    logger.error(`应用启动失败: ${error.message}`);
+    process.exit(1);
   }
 }
 

@@ -13,7 +13,7 @@ services:
       - ./logs:/app/logs
       - ./.env:/app/.env
       # 挂载您需要监控的目录（根据实际情况修改）
-      - ${WATCH_DIR:-./watched}:/data
+      - ${WATCH_DIR:-./watched}:/app/watched
     environment:
       - NODE_ENV=production
       - PORT=3000

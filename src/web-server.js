@@ -12,6 +12,7 @@ import axios from 'axios';
 import os from 'os';
 import { createWatcher } from './watcher.js';
 import fs_sync from 'fs';
+import { initialize } from './initialize.js';
 
 // 获取当前文件的目录
 const __filename = fileURLToPath(import.meta.url);
@@ -556,7 +557,14 @@ function getSystemRoots(platform) {
   }
 }
 
-export function startServer(port = 3000) {
+export async function startServer(port = 3000) {
+  // 初始化应用程序
+  const initSuccess = await initialize();
+  if (!initSuccess) {
+    logger.error("应用程序初始化失败，无法启动服务器");
+    process.exit(1);
+  }
+  
   // 首先检查环境变量，并输出状态信息
   const githubToken = process.env.GITHUB_TOKEN || '';
   const githubUsername = process.env.GITHUB_USERNAME || '';
