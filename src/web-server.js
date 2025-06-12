@@ -1546,4 +1546,8 @@ export async function startServer(port = 3000) {
   });
   
   return app;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startServer(3000);
 } 
