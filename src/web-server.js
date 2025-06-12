@@ -68,9 +68,19 @@ async function startMonitoringTask(project) {
     const githubToken = process.env.GITHUB_TOKEN;
     const githubUsername = process.env.GITHUB_USERNAME;
     
-    if (!githubToken || !githubUsername) {
-      logger.error(`项目 "${project.name}" 启动失败: 缺少 GitHub Token 或用户名`);
-      return false;
+    // 检查GitHub凭据是否为默认值
+    const isDefaultToken = githubToken === 'default_token_please_change' || 
+                           githubToken === 'default_token_for_startup';
+    const isDefaultUsername = githubUsername === 'default_username_please_change' || 
+                              githubUsername === 'default_username_for_startup';
+    
+    // GitHub集成是否可用
+    const githubIntegrationEnabled = githubToken && githubUsername && 
+                                     !isDefaultToken && !isDefaultUsername;
+    
+    if (!githubIntegrationEnabled) {
+      logger.warn(`项目 "${project.name}": GitHub集成不可用 - 使用了默认凭据或缺少凭据`);
+      logger.warn('文件变化将被监控但不会上传到GitHub');
     }
     
     // 忽略的文件/文件夹模式
@@ -81,19 +91,25 @@ async function startMonitoringTask(project) {
     // 配置延迟提交时间（毫秒）
     const debounceTime = 2000;
     
-    // 初始化 GitHub API 服务
-    const githubService = new GitHubApiService(
-      githubToken,
-      githubUsername,
-      project.repo,
-      project.branch
-    );
+    let githubService = null;
     
-    // 验证 token 有效性
-    const isTokenValid = await githubService.validateToken();
-    if (!isTokenValid) {
-      logger.error(`项目 "${project.name}" 启动失败: GitHub Token 无效`);
-      return false;
+    // 只有在GitHub集成启用时才初始化GitHub服务
+    if (githubIntegrationEnabled) {
+      // 初始化 GitHub API 服务
+      githubService = new GitHubApiService(
+        githubToken,
+        githubUsername,
+        project.repo,
+        project.branch
+      );
+      
+      // 验证 token 有效性
+      const isTokenValid = await githubService.validateToken();
+      if (!isTokenValid) {
+        logger.error(`项目 "${project.name}": GitHub Token 无效，禁用GitHub集成`);
+        githubService = null;
+        githubIntegrationEnabled = false;
+      }
     }
     
     // 检查路径是文件还是目录
@@ -102,13 +118,26 @@ async function startMonitoringTask(project) {
     
     logger.info(`启动项目 "${project.name}" 的文件监控`);
     logger.info(`监控路径: ${project.path}`);
-    logger.info(`GitHub 仓库: ${githubUsername}/${project.repo}`);
-    logger.info(`GitHub 分支: ${project.branch}`);
+    
+    if (githubIntegrationEnabled) {
+      logger.info(`GitHub 仓库: ${githubUsername}/${project.repo}`);
+      logger.info(`GitHub 分支: ${project.branch}`);
+    } else {
+      logger.info('GitHub集成已禁用，文件变化只会在本地监控');
+    }
     
     // 创建并启动文件监控
     const watcher = createWatcher(project.path, ignoredPatterns, debounceTime, async (changedFiles) => {
       try {
         logger.info(`项目 "${project.name}" 检测到文件变化: ${changedFiles.length} 个文件被修改`);
+        
+        // 如果GitHub集成不可用，只记录变化但不上传
+        if (!githubIntegrationEnabled || !githubService) {
+          logger.info(`项目 "${project.name}" 检测到文件变化，但由于GitHub集成不可用，文件未上传`);
+          // 更新项目的最后更新时间
+          await updateProjectLastUpdateTime(project.id);
+          return;
+        }
         
         if (changedFiles.length > 0) {
           // 准备上传文件
@@ -169,7 +198,8 @@ async function startMonitoringTask(project) {
     // 保存监控任务
     activeMonitoringTasks.set(project.id, {
       watcher,
-      project
+      project,
+      githubEnabled: githubIntegrationEnabled
     });
     
     logger.info(`项目 "${project.name}" 监控已启动，等待文件变化...`);
@@ -249,69 +279,94 @@ async function initialProjectUpload(project) {
   try {
     logger.info(`开始执行项目 "${project.name}" 的初始文件上传...`);
     
-    // 验证路径存在
-    if (!existsSync(project.path)) {
-      logger.error(`项目 "${project.name}" 的路径不存在: ${project.path}`);
-      return false;
-    }
-    
-    // 获取环境变量
-    const githubToken = process.env.GITHUB_TOKEN;
-    const githubUsername = process.env.GITHUB_USERNAME;
-    
-    if (!githubToken || !githubUsername) {
-      logger.error(`项目 "${project.name}" 初始上传失败: 缺少 GitHub Token 或用户名`);
-      return false;
-    }
-    
-    // 忽略的文件/文件夹模式
-    const ignoredPatterns = project.ignoredPatterns 
-      ? project.ignoredPatterns.split(',') 
-      : ['node_modules', '.git', '*.tmp'];
-    
-    // 初始化 GitHub API 服务
-    const githubService = new GitHubApiService(
-      githubToken,
-      githubUsername,
-      project.repo,
-      project.branch
-    );
-    
-    // 验证 token 有效性
-    const isTokenValid = await githubService.validateToken();
-    if (!isTokenValid) {
-      logger.error(`项目 "${project.name}" 初始上传失败: GitHub Token 无效`);
-      return false;
-    }
-    
     try {
+      // 验证路径存在
+      if (!existsSync(project.path)) {
+        logger.error(`项目 "${project.name}" 的路径不存在: ${project.path}`);
+        return false;
+      }
+      
+      // 获取环境变量
+      const githubToken = process.env.GITHUB_TOKEN;
+      const githubUsername = process.env.GITHUB_USERNAME;
+      
+      // 检查GitHub凭据是否为默认值
+      const isDefaultToken = githubToken === 'default_token_please_change' || 
+                             githubToken === 'default_token_for_startup';
+      const isDefaultUsername = githubUsername === 'default_username_please_change' || 
+                                githubUsername === 'default_username_for_startup';
+      
+      // GitHub集成是否可用
+      const githubIntegrationEnabled = githubToken && githubUsername && 
+                                       !isDefaultToken && !isDefaultUsername;
+      
+      if (!githubIntegrationEnabled) {
+        logger.warn(`项目 "${project.name}": GitHub集成不可用 - 使用了默认凭据或缺少凭据`);
+        logger.warn('无法执行初始文件上传');
+        return false;
+      }
+      
+      // 初始化 GitHub API 服务
+      const githubService = new GitHubApiService(
+        githubToken,
+        githubUsername,
+        project.repo,
+        project.branch
+      );
+      
+      // 验证 token 有效性
+      const isTokenValid = await githubService.validateToken();
+      if (!isTokenValid) {
+        logger.error(`项目 "${project.name}" GitHub Token 无效，无法执行初始上传`);
+        return false;
+      }
+      
       // 检查路径是文件还是目录
       const stats = await fs.stat(project.path);
       
       if (stats.isFile()) {
-        // 如果是单个文件，直接上传
-        logger.info(`项目 "${project.name}" 路径是单个文件，准备上传...`);
+        // 路径是文件，直接上传
+        const filename = path.basename(project.path);
         
-        const fileName = path.basename(project.path);
+        logger.info(`项目 "${project.name}" 是单个文件，准备上传: ${filename}`);
+        
+        const filesToUpload = [{
+          localPath: project.path,
+          repoPath: filename
+        }];
         
         // 上传文件
-        const result = await githubService.uploadFile(
-          project.path,
-          fileName,
-          project.commitMessage || 'Initial commit'
-        );
+        const uploadResults = await githubService.uploadFiles(filesToUpload, project.commitMessage || 'Initial commit');
         
-        logger.info(`项目 "${project.name}" 文件 ${fileName} 上传成功`);
+        // 输出上传结果
+        const successCount = uploadResults.filter(r => r.success).length;
+        const failCount = uploadResults.length - successCount;
+        
+        logger.info(`项目 "${project.name}" 初始上传完成: ${successCount} 成功, ${failCount} 失败`);
+        
+        // 记录失败的文件
+        if (failCount > 0) {
+          uploadResults
+            .filter(r => !r.success)
+            .forEach(r => logger.error(`项目 "${project.name}" 文件 ${r.file.repoPath} 上传失败: ${r.error}`));
+        }
         
         // 更新项目的最后更新时间
         await updateProjectLastUpdateTime(project.id);
         
-        return true;
+        return successCount > 0;
       } else if (stats.isDirectory()) {
-        // 如果是目录，递归获取所有文件
-        logger.info(`项目 "${project.name}" 路径是目录，准备扫描文件...`);
+        // 路径是目录，递归上传所有文件
         
-        // 递归获取所有文件
+        // 忽略的文件/文件夹模式
+        const ignoredPatterns = project.ignoredPatterns 
+          ? project.ignoredPatterns.split(',') 
+          : ['node_modules', '.git', '*.tmp'];
+        
+        logger.info(`项目 "${project.name}" 是目录，准备递归上传所有文件`);
+        logger.info(`忽略的模式: ${ignoredPatterns.join(', ')}`);
+        
+        // 获取目录中的所有文件（递归）
         const getAllFiles = async (dirPath, ignorePatterns) => {
           const files = [];
           const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -502,6 +557,29 @@ function getSystemRoots(platform) {
 }
 
 export function startServer(port = 3000) {
+  // 首先检查环境变量，并输出状态信息
+  const githubToken = process.env.GITHUB_TOKEN || '';
+  const githubUsername = process.env.GITHUB_USERNAME || '';
+  
+  // 检查GitHub凭据是否为默认值
+  const isDefaultToken = githubToken === 'default_token_please_change' || 
+                       githubToken === 'default_token_for_startup';
+  const isDefaultUsername = githubUsername === 'default_username_please_change' || 
+                          githubUsername === 'default_username_for_startup';
+  
+  // GitHub集成是否可用
+  const githubIntegrationEnabled = githubToken && githubUsername && 
+                                 !isDefaultToken && !isDefaultUsername;
+  
+  logger.info('文件监控应用程序启动中...');
+  if (githubIntegrationEnabled) {
+    logger.info(`GitHub集成已启用 - 用户: ${githubUsername}`);
+  } else {
+    logger.warn('GitHub集成未启用 - 使用了默认凭据或缺少必要的环境变量');
+    logger.warn('应用程序将正常启动，但GitHub相关功能将不可用');
+    logger.warn('要启用GitHub集成，请在.env文件中设置GITHUB_TOKEN和GITHUB_USERNAME');
+  }
+  
   const app = express();
   
   // 设置模板引擎
@@ -523,12 +601,22 @@ export function startServer(port = 3000) {
   app.get('/', async (req, res) => {
     try {
       // 获取环境变量信息
+      const githubToken = process.env.GITHUB_TOKEN || '';
+      const githubUsername = process.env.GITHUB_USERNAME || '';
+      
+      // 检查GitHub凭据是否为默认值
+      const isDefaultToken = githubToken === 'default_token_please_change' || 
+                           githubToken === 'default_token_for_startup';
+      const isDefaultUsername = githubUsername === 'default_username_please_change' || 
+                              githubUsername === 'default_username_for_startup';
+      
+      // 配置信息
       const config = {
-        githubToken: process.env.GITHUB_TOKEN || '',
-        githubUsername: process.env.GITHUB_USERNAME || '',
+        githubToken,
+        githubUsername,
         githubRepo: process.env.GITHUB_REPO || '',
         watchPath: process.env.WATCH_PATH || '',
-        isConfigured: !!(process.env.GITHUB_TOKEN && process.env.GITHUB_USERNAME)
+        isConfigured: githubToken && githubUsername && !isDefaultToken && !isDefaultUsername
       };
       
       // 获取项目列表
@@ -1333,14 +1421,13 @@ export function startServer(port = 3000) {
     }
   });
   
-  // 启动所有活跃项目的监控
-  startAllActiveProjects().then(() => {
-    logger.info('所有活跃项目的监控已启动');
-  });
-  
   // 启动服务器
   app.listen(port, () => {
-    logger.info(`服务器已启动，监听端口: ${port}`);
+    logger.info(`服务器已启动，正在监听端口 ${port}`);
+    logger.info(`访问 http://localhost:${port} 进入管理界面`);
+    
+    // 启动所有活跃项目的监控
+    startAllActiveProjects();
   });
   
   // GitHub连接测试API

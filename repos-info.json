@@ -1,0 +1,702 @@
+[
+  {
+    "name": "node11",
+    "url": "https://github.com/rdone4425/node11",
+    "cloneUrl": "https://github.com/rdone4425/node11.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "yuming-ip",
+    "url": "https://github.com/rdone4425/yuming-ip",
+    "cloneUrl": "https://github.com/rdone4425/yuming-ip.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "epeius",
+    "url": "https://github.com/rdone4425/epeius",
+    "cloneUrl": "https://github.com/rdone4425/epeius.git",
+    "description": "在原版的基础上修改了显示 Trojan 配置信息转换为订阅内容。使用该脚本，你可以方便地将 Trojan 配置信息使用在线配置转换到 Clash 或 Singbox 等工具中。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "edgetunnel",
+    "url": "https://github.com/rdone4425/edgetunnel",
+    "cloneUrl": "https://github.com/rdone4425/edgetunnel.git",
+    "description": "在原版的基础上修改了显示 VLESS 配置信息转换为订阅内容。使用该脚本，你可以方便地将 VLESS 配置信息使用在线配置转换到 Clash 或 Singbox 等工具中。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "WorkerVless2sub",
+    "url": "https://github.com/rdone4425/WorkerVless2sub",
+    "cloneUrl": "https://github.com/rdone4425/WorkerVless2sub.git",
+    "description": "这个是一个将 Cloudflare Workers - VLESS 搭配 自建优选域名 的 订阅生成器",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "CF-Workers-CheckProxyIP",
+    "url": "https://github.com/rdone4425/CF-Workers-CheckProxyIP",
+    "cloneUrl": "https://github.com/rdone4425/CF-Workers-CheckProxyIP.git",
+    "description": "部署在 Cloudflare Workers 上的轻量级 ProxyIP 验证工具。它能够快速、准确地检测代理IP的可用性，帮助用户筛选出有效的代理服务器。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "gemini12",
+    "url": "https://github.com/rdone4425/gemini12",
+    "cloneUrl": "https://github.com/rdone4425/gemini12.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "my-openai-gemini",
+    "url": "https://github.com/rdone4425/my-openai-gemini",
+    "cloneUrl": "https://github.com/rdone4425/my-openai-gemini.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "youxuanyuming",
+    "url": "https://github.com/rdone4425/youxuanyuming",
+    "cloneUrl": "https://github.com/rdone4425/youxuanyuming.git",
+    "description": "使用采集ip搭建优选域名",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "nav",
+    "url": "https://github.com/rdone4425/nav",
+    "cloneUrl": "https://github.com/rdone4425/nav.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cf-nas-youxuan",
+    "url": "https://github.com/rdone4425/cf-nas-youxuan",
+    "cloneUrl": "https://github.com/rdone4425/cf-nas-youxuan.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "anti-AD",
+    "url": "https://github.com/rdone4425/anti-AD",
+    "cloneUrl": "https://github.com/rdone4425/anti-AD.git",
+    "description": "致力于成为中文区命中率最高的广告过滤列表，实现精确的广告屏蔽和隐私保护。anti-AD现已支持AdGuardHome，dnsmasq， Surge，Pi-Hole，smartdns等网络组件。完全兼容常见的广告过滤工具所支持的各种广告过滤列表格式",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "ip-check",
+    "url": "https://github.com/rdone4425/ip-check",
+    "cloneUrl": "https://github.com/rdone4425/ip-check.git",
+    "description": "优选ip 工具，适用于CF CDN 测速，适用于各大网站加速，测速",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Card-Tab",
+    "url": "https://github.com/rdone4425/Card-Tab",
+    "cloneUrl": "https://github.com/rdone4425/Card-Tab.git",
+    "description": "✨一个部署在CF的轻量化导航页面，可移动卡片式书签，方便管理",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "shuqian123",
+    "url": "https://github.com/rdone4425/shuqian123",
+    "cloneUrl": "https://github.com/rdone4425/shuqian123.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "bookmark-api",
+    "url": "https://github.com/rdone4425/bookmark-api",
+    "cloneUrl": "https://github.com/rdone4425/bookmark-api.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "V2ray-Configs",
+    "url": "https://github.com/rdone4425/V2ray-Configs",
+    "cloneUrl": "https://github.com/rdone4425/V2ray-Configs.git",
+    "description": "🛰️✨ Free V2ray Configs , Updating Every 10 minutes.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "free-augment-code",
+    "url": "https://github.com/rdone4425/free-augment-code",
+    "cloneUrl": "https://github.com/rdone4425/free-augment-code.git",
+    "description": "AugmentCode 无限续杯浏览器插件",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cfipcaiji",
+    "url": "https://github.com/rdone4425/cfipcaiji",
+    "cloneUrl": "https://github.com/rdone4425/cfipcaiji.git",
+    "description": "从一个提供优选ip的网站进行优选cf ip采集",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "github-proxy",
+    "url": "https://github.com/rdone4425/github-proxy",
+    "cloneUrl": "https://github.com/rdone4425/github-proxy.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "git11",
+    "url": "https://github.com/rdone4425/git11",
+    "cloneUrl": "https://github.com/rdone4425/git11.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "kscanner",
+    "url": "https://github.com/rdone4425/kscanner",
+    "cloneUrl": "https://github.com/rdone4425/kscanner.git",
+    "description": "Cloudflare Clean IP Scanner with SNI & Port",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "optimalIpCloudFlareDns",
+    "url": "https://github.com/rdone4425/optimalIpCloudFlareDns",
+    "cloneUrl": "https://github.com/rdone4425/optimalIpCloudFlareDns.git",
+    "description": "本地优选IP并更新cloudflareDns",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "LibreTV",
+    "url": "https://github.com/rdone4425/LibreTV",
+    "cloneUrl": "https://github.com/rdone4425/LibreTV.git",
+    "description": "一分钟搭建影视站，支持Vercel/Docker等部署方式",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Cloudflare_vless_trojan",
+    "url": "https://github.com/rdone4425/Cloudflare_vless_trojan",
+    "cloneUrl": "https://github.com/rdone4425/Cloudflare_vless_trojan.git",
+    "description": "CF-workers/pages代理脚本【Vless与Trojan】，支持一键自建proxyip与CF反代IP，CF优选官方IP三地区应用脚本，自动输出美、亚、欧最佳优选IP",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "rdone",
+    "url": "https://github.com/rdone4425/rdone",
+    "cloneUrl": "https://github.com/rdone4425/rdone.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "ios_rule_script",
+    "url": "https://github.com/rdone4425/ios_rule_script",
+    "cloneUrl": "https://github.com/rdone4425/ios_rule_script.git",
+    "description": "分流规则、重写写规则及脚本。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Cloud-N1-OpenWrt",
+    "url": "https://github.com/rdone4425/Cloud-N1-OpenWrt",
+    "cloneUrl": "https://github.com/rdone4425/Cloud-N1-OpenWrt.git",
+    "description": "Github Actions 自动编译 OpenWrt 固件（适配 Phicomm N1）",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "amlogic-s9xxx-openwrt",
+    "url": "https://github.com/rdone4425/amlogic-s9xxx-openwrt",
+    "cloneUrl": "https://github.com/rdone4425/amlogic-s9xxx-openwrt.git",
+    "description": "Support for OpenWrt in Amlogic, Rockchip and Allwinner boxes. Support a311d, s922x, s905x3, s905x2, s912, s905d, s905x, s905w, s905, s905l, rk3588, rk3568, rk3399, rk3328, h6, etc.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "OpenWrt",
+    "url": "https://github.com/rdone4425/OpenWrt",
+    "cloneUrl": "https://github.com/rdone4425/OpenWrt.git",
+    "description": "基于 Lean 源码编译的 OpenWrt 固件——适配X86、R2C、R2S、R4S、R4SE、R5C、R5S、香橙派 R1 Plus、树莓派3B、树莓派4B、R66S、R68S、M68S、H28K、H66K、H68K、H88K、H69K、E25、N1、S905x3、S922x、HK1、X96max、微加云、贝壳云、我家云、章鱼星球等",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "OpenWrt-nikki",
+    "url": "https://github.com/rdone4425/OpenWrt-nikki",
+    "cloneUrl": "https://github.com/rdone4425/OpenWrt-nikki.git",
+    "description": "Transparent Proxy with Mihomo on OpenWrt.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "CFnat-Docker",
+    "url": "https://github.com/rdone4425/CFnat-Docker",
+    "cloneUrl": "https://github.com/rdone4425/CFnat-Docker.git",
+    "description": "CFnat 是为优化 Cloudflare 数据中心性能而设计的 Docker 镜像，支持多架构，通过实时筛选并连接低延迟 IP，适用于网络加速与高效流量转发场景。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "go-cursor-help",
+    "url": "https://github.com/rdone4425/go-cursor-help",
+    "cloneUrl": "https://github.com/rdone4425/go-cursor-help.git",
+    "description": "解决Cursor在免费订阅期间出现以下提示的问题:  You've reached your trial request limit.  /  Too many free trial accounts used on this machine. Please upgrade to pro. We have this limit in place to prevent abuse. Please let us know if you believe this is a mistake.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cursor_machine_id",
+    "url": "https://github.com/rdone4425/cursor_machine_id",
+    "cloneUrl": "https://github.com/rdone4425/cursor_machine_id.git",
+    "description": "一键修改cursor 设备ID，解除设备锁定状态，为什么会有这个工具。。。因为我的设备被锁了。。。。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "enhanced-FaaS-in-China",
+    "url": "https://github.com/rdone4425/enhanced-FaaS-in-China",
+    "cloneUrl": "https://github.com/rdone4425/enhanced-FaaS-in-China.git",
+    "description": "提升部署在cloudflare、vercel或netlify的网页在中国的访问速度和稳定性 Improve the access speed and stability in China of web pages hosted on cloudflare, vercel or netlify by merely changing your CNAME record. cf优选域名 | cf优选ip | cloudflare | vercel | netlify | 加速 | 国内 | 中国 | 境内 | 大陆",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "lobe-chat",
+    "url": "https://github.com/rdone4425/lobe-chat",
+    "cloneUrl": "https://github.com/rdone4425/lobe-chat.git",
+    "description": "🤖 Lobe Chat - an open-source, high-performance chatbot framework that supports speech synthesis, multimodal, and extensible Function Call plugin system. Supports one-click free deployment of your private ChatGPT/LLM web application.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "CloudFrontIPSelector",
+    "url": "https://github.com/rdone4425/CloudFrontIPSelector",
+    "cloneUrl": "https://github.com/rdone4425/CloudFrontIPSelector.git",
+    "description": "🔍To choose the best CloudFront IPs for achieving fast⚡ and low-latency connections",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "CF-Workers-SUB",
+    "url": "https://github.com/rdone4425/CF-Workers-SUB",
+    "cloneUrl": "https://github.com/rdone4425/CF-Workers-SUB.git",
+    "description": "这个是一个通过 Cloudflare Workers 搭建，将你任意节点与多个订阅汇聚成专属于你的订阅链接",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "AutoEUServerless",
+    "url": "https://github.com/rdone4425/AutoEUServerless",
+    "cloneUrl": "https://github.com/rdone4425/AutoEUServerless.git",
+    "description": "AutoEUServerless 是一个基于腾讯云函数 Serverless 架构的自动化工具，用于自动续期 EUserv 免费 IPv6 VPS。项目目的是简化续期过程，避免因遗忘续期而导致服务中断。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "doh-cf-workers",
+    "url": "https://github.com/rdone4425/doh-cf-workers",
+    "cloneUrl": "https://github.com/rdone4425/doh-cf-workers.git",
+    "description": "DNS-over-HTTPS proxy on Cloudflare Workers",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "WebStack-Guns",
+    "url": "https://github.com/rdone4425/WebStack-Guns",
+    "cloneUrl": "https://github.com/rdone4425/WebStack-Guns.git",
+    "description": "一个开源的网址导航网站项目，后台基于Guns和Springboot",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "meta-rules-dat",
+    "url": "https://github.com/rdone4425/meta-rules-dat",
+    "cloneUrl": "https://github.com/rdone4425/meta-rules-dat.git",
+    "description": "rules-dat for mihomo",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cloudflare_temp_email",
+    "url": "https://github.com/rdone4425/cloudflare_temp_email",
+    "cloneUrl": "https://github.com/rdone4425/cloudflare_temp_email.git",
+    "description": "CloudFlare free temp domain email 免费 临时 域名邮箱",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cf-speed-dns",
+    "url": "https://github.com/rdone4425/cf-speed-dns",
+    "cloneUrl": "https://github.com/rdone4425/cf-speed-dns.git",
+    "description": "CloudflareSpeedTest 推送「每5分钟自选优选 IP」获取Cloudflare CDN 延迟和速度最快 IP ！",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "MyIP",
+    "url": "https://github.com/rdone4425/MyIP",
+    "cloneUrl": "https://github.com/rdone4425/MyIP.git",
+    "description": "The best IP Toolbox. Easy to check what's your IPs, IP geolocation, check for DNS leaks, examine WebRTC connections, speed test, ping test, MTR test, check website availability, whois search and more! || 🇨🇳 可能是最好用的IP工具箱。轻松检查你的 IP，IP 地理位置，检查DNS泄漏，检查 WebRTC 连接，速度测试，ping 测试，MTR测试，检查网站可用性，查询 Whois 信息等等。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "ipinfo-free-api",
+    "url": "https://github.com/rdone4425/ipinfo-free-api",
+    "cloneUrl": "https://github.com/rdone4425/ipinfo-free-api.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "free-domains",
+    "url": "https://github.com/rdone4425/free-domains",
+    "cloneUrl": "https://github.com/rdone4425/free-domains.git",
+    "description": "Free subdomains for personal sites, open-source projects, and more. ",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "metrics",
+    "url": "https://github.com/rdone4425/metrics",
+    "cloneUrl": "https://github.com/rdone4425/metrics.git",
+    "description": "📊 An infographics generator with 30+ plugins and 300+ options to display stats about your GitHub account and render them as SVG, Markdown, PDF or JSON!",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "moemail",
+    "url": "https://github.com/rdone4425/moemail",
+    "cloneUrl": "https://github.com/rdone4425/moemail.git",
+    "description": "一个基于 NextJS + Cloudflare 技术栈构建的可爱临时邮箱服务🎉",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cursor-fake-machine",
+    "url": "https://github.com/rdone4425/cursor-fake-machine",
+    "cloneUrl": "https://github.com/rdone4425/cursor-fake-machine.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Subhub",
+    "url": "https://github.com/rdone4425/Subhub",
+    "cloneUrl": "https://github.com/rdone4425/Subhub.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "bolt.new-any-llm",
+    "url": "https://github.com/rdone4425/bolt.new-any-llm",
+    "cloneUrl": "https://github.com/rdone4425/bolt.new-any-llm.git",
+    "description": "Prompt, run, edit, and deploy full-stack web applications using any LLM you want!",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "akile_monitor",
+    "url": "https://github.com/rdone4425/akile_monitor",
+    "cloneUrl": "https://github.com/rdone4425/akile_monitor.git",
+    "description": "Akile Monitor",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Sub-Store",
+    "url": "https://github.com/rdone4425/Sub-Store",
+    "cloneUrl": "https://github.com/rdone4425/Sub-Store.git",
+    "description": "Advanced Subscription Manager for QX, Loon, Surge, Stash and ShadowRocket!",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "warp-yg",
+    "url": "https://github.com/rdone4425/warp-yg",
+    "cloneUrl": "https://github.com/rdone4425/warp-yg.git",
+    "description": "warp多功能一键脚本，查看VPS本地IP、netflix、chatgpt(网页与客户端)是否解锁等情况、endpoint对端优选IP等功能，VPS平台与Replit平台无限生成warp+密钥与warp配置文件",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "IPDB",
+    "url": "https://github.com/rdone4425/IPDB",
+    "cloneUrl": "https://github.com/rdone4425/IPDB.git",
+    "description": "Cloudflare反代优选IP库",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "ollama",
+    "url": "https://github.com/rdone4425/ollama",
+    "cloneUrl": "https://github.com/rdone4425/ollama.git",
+    "description": "Get up and running with Llama 3.2, Mistral, Gemma 2, and other large language models.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "bolt1",
+    "url": "https://github.com/rdone4425/bolt1",
+    "cloneUrl": "https://github.com/rdone4425/bolt1.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "query-key",
+    "url": "https://github.com/rdone4425/query-key",
+    "cloneUrl": "https://github.com/rdone4425/query-key.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "V2rayCollector_Py",
+    "url": "https://github.com/rdone4425/V2rayCollector_Py",
+    "cloneUrl": "https://github.com/rdone4425/V2rayCollector_Py.git",
+    "description": "Enjoy :)",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "open-webui",
+    "url": "https://github.com/rdone4425/open-webui",
+    "cloneUrl": "https://github.com/rdone4425/open-webui.git",
+    "description": "User-friendly WebUI for LLMs (Formerly Ollama WebUI)",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "BroadcastChannel",
+    "url": "https://github.com/rdone4425/BroadcastChannel",
+    "cloneUrl": "https://github.com/rdone4425/BroadcastChannel.git",
+    "description": "Turn your Telegram Channel into a MicroBlog.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "site",
+    "url": "https://github.com/rdone4425/site",
+    "cloneUrl": "https://github.com/rdone4425/site.git",
+    "description": "The website for Hexo.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "public-apis1",
+    "url": "https://github.com/rdone4425/public-apis1",
+    "cloneUrl": "https://github.com/rdone4425/public-apis1.git",
+    "description": "A collaborative list of public APIs for developers",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "public-apis",
+    "url": "https://github.com/rdone4425/public-apis",
+    "cloneUrl": "https://github.com/rdone4425/public-apis.git",
+    "description": "A collective list of free APIs",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "homepage",
+    "url": "https://github.com/rdone4425/homepage",
+    "cloneUrl": "https://github.com/rdone4425/homepage.git",
+    "description": "A highly customizable homepage (or startpage / application dashboard) with Docker and service API integrations.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "hg-api2",
+    "url": "https://github.com/rdone4425/hg-api2",
+    "cloneUrl": "https://github.com/rdone4425/hg-api2.git",
+    "description": "huggingface",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "ChatGPT-Next-Web",
+    "url": "https://github.com/rdone4425/ChatGPT-Next-Web",
+    "cloneUrl": "https://github.com/rdone4425/ChatGPT-Next-Web.git",
+    "description": "A cross-platform ChatGPT/Gemini UI (Web / PWA / Linux / Win / MacOS). 一键拥有你自己的跨平台 ChatGPT/Gemini 应用。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "dnsmgr_caihong",
+    "url": "https://github.com/rdone4425/dnsmgr_caihong",
+    "cloneUrl": "https://github.com/rdone4425/dnsmgr_caihong.git",
+    "description": "A unified DNS management system enables managing domain name resolutions from multiple platforms within a single website. Currently supported domain name platforms include Alibaba Cloud, Tencent Cloud, Huawei Cloud, Western Digital, and CloudFlare.| 彩虹聚合DNS管理系统可以实现在一个网站内管理多个平台的域名解析，目前已支持的域名平台有：阿里云、腾讯云、华为云、西部数码、CloudFlare。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "sing-geosite",
+    "url": "https://github.com/rdone4425/sing-geosite",
+    "cloneUrl": "https://github.com/rdone4425/sing-geosite.git",
+    "description": " Geosite database and rule sets for sing-box. ",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "ADAS",
+    "url": "https://github.com/rdone4425/ADAS",
+    "cloneUrl": "https://github.com/rdone4425/ADAS.git",
+    "description": "Automated Design of Agentic Systems",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "EDtunnel",
+    "url": "https://github.com/rdone4425/EDtunnel",
+    "cloneUrl": "https://github.com/rdone4425/EDtunnel.git",
+    "description": "Use Cloudflare pages and worker serverless to implement VLESS protocol",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cloudflarefreeDH-AI",
+    "url": "https://github.com/rdone4425/cloudflarefreeDH-AI",
+    "cloneUrl": "https://github.com/rdone4425/cloudflarefreeDH-AI.git",
+    "description": "chatGPT生成的可以部署在cloudflare的免费导航页 无需服务器",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "lobe-chat-plugins",
+    "url": "https://github.com/rdone4425/lobe-chat-plugins",
+    "cloneUrl": "https://github.com/rdone4425/lobe-chat-plugins.git",
+    "description": "🧩 / 🏪  Plugin Index - This is the plugin index for LobeChat. It accesses index.json from this repository to display a list of available plugins for LobeChat to the user.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "CF-Workers-Raw",
+    "url": "https://github.com/rdone4425/CF-Workers-Raw",
+    "cloneUrl": "https://github.com/rdone4425/CF-Workers-Raw.git",
+    "description": "这个项目允许你通过Cloudflare Workers安全地访问GitHub私有仓库中的原始文件，无需直接暴露你的GitHub令牌。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "sing-box-subscribe",
+    "url": "https://github.com/rdone4425/sing-box-subscribe",
+    "cloneUrl": "https://github.com/rdone4425/sing-box-subscribe.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "youxuan",
+    "url": "https://github.com/rdone4425/youxuan",
+    "cloneUrl": "https://github.com/rdone4425/youxuan.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "CF-Workers-DD2D",
+    "url": "https://github.com/rdone4425/CF-Workers-DD2D",
+    "cloneUrl": "https://github.com/rdone4425/CF-Workers-DD2D.git",
+    "description": "将多个域名IP解析至指定域名的worker.js定时脚本",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cf2dns1",
+    "url": "https://github.com/rdone4425/cf2dns1",
+    "cloneUrl": "https://github.com/rdone4425/cf2dns1.git",
+    "description": "cf2dns宝塔插件版",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "atuoyx",
+    "url": "https://github.com/rdone4425/atuoyx",
+    "cloneUrl": "https://github.com/rdone4425/atuoyx.git",
+    "description": "自动优选IP脚本",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "flask-socketio-llm-completions",
+    "url": "https://github.com/rdone4425/flask-socketio-llm-completions",
+    "cloneUrl": "https://github.com/rdone4425/flask-socketio-llm-completions.git",
+    "description": "Chatroom app where messages are sent to GPT, Claude, Mistral, Together, Groq AI and streamed to the frontend.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "weekly",
+    "url": "https://github.com/rdone4425/weekly",
+    "cloneUrl": "https://github.com/rdone4425/weekly.git",
+    "description": "【周刊】针对优秀项目、软件、教程资料、网站等。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "cloudflare-ai-web",
+    "url": "https://github.com/rdone4425/cloudflare-ai-web",
+    "cloneUrl": "https://github.com/rdone4425/cloudflare-ai-web.git",
+    "description": "支持Gemini Pro / Cloudflare Workers AI / ChatGPT的融合Web平台",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "BestDomain",
+    "url": "https://github.com/rdone4425/BestDomain",
+    "cloneUrl": "https://github.com/rdone4425/BestDomain.git",
+    "description": "将 IPDB 的优选Cloudflare IP DNS 解析到域",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "GcoreCDNIPSelector",
+    "url": "https://github.com/rdone4425/GcoreCDNIPSelector",
+    "cloneUrl": "https://github.com/rdone4425/GcoreCDNIPSelector.git",
+    "description": "🔍 to choose the best Gcore‘IPs for connection 📶 with lowest latency.(gcore优选ip)",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "proxy_tools",
+    "url": "https://github.com/rdone4425/proxy_tools",
+    "cloneUrl": "https://github.com/rdone4425/proxy_tools.git",
+    "description": "Loon插件备份仓库配置文件，Clash自用分流规则集，非规则集碎片，ACL4SSR规则全分组多模式",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "DailyHotApi",
+    "url": "https://github.com/rdone4425/DailyHotApi",
+    "cloneUrl": "https://github.com/rdone4425/DailyHotApi.git",
+    "description": "🔥 今日热榜 API，一个聚合热门数据的 API 接口，支持 RSS 模式 及 Vercel 部署 | 前端页面：https://github.com/imsyy/DailyHot",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "aurora",
+    "url": "https://github.com/rdone4425/aurora",
+    "cloneUrl": "https://github.com/rdone4425/aurora.git",
+    "description": "",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Fofa-hack",
+    "url": "https://github.com/rdone4425/Fofa-hack",
+    "cloneUrl": "https://github.com/rdone4425/Fofa-hack.git",
+    "description": "非付费会员，fofa数据采集工具",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "zjccc1999",
+    "url": "https://github.com/rdone4425/zjccc1999",
+    "cloneUrl": "https://github.com/rdone4425/zjccc1999.git",
+    "description": "Config files for my GitHub profile.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "IDM-Activation-Script",
+    "url": "https://github.com/rdone4425/IDM-Activation-Script",
+    "cloneUrl": "https://github.com/rdone4425/IDM-Activation-Script.git",
+    "description": "An open source tool to activate and reset trial of Internet Download Manager",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Sub-Store-Manager-Cli",
+    "url": "https://github.com/rdone4425/Sub-Store-Manager-Cli",
+    "cloneUrl": "https://github.com/rdone4425/Sub-Store-Manager-Cli.git",
+    "description": "A cli tool for https://github.com/sub-store-org/Sub-Store base docker.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "website",
+    "url": "https://github.com/rdone4425/website",
+    "cloneUrl": "https://github.com/rdone4425/website.git",
+    "description": "Umami website",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "aggregator",
+    "url": "https://github.com/rdone4425/aggregator",
+    "cloneUrl": "https://github.com/rdone4425/aggregator.git",
+    "description": "自动签到、自动注册、订阅聚合及爬取脚本等",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "vmail",
+    "url": "https://github.com/rdone4425/vmail",
+    "cloneUrl": "https://github.com/rdone4425/vmail.git",
+    "description": "📫 Open source temporary email tool. 开源临时邮箱工具，支持收发邮件。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "chatgpt-lite",
+    "url": "https://github.com/rdone4425/chatgpt-lite",
+    "cloneUrl": "https://github.com/rdone4425/chatgpt-lite.git",
+    "description": "Fast ChatGPT UI with support for both OpenAI and Azure OpenAI. 快速的ChatGPT UI，支持OpenAI和Azure OpenAI。",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "diff.ai",
+    "url": "https://github.com/rdone4425/diff.ai",
+    "cloneUrl": "https://github.com/rdone4425/diff.ai.git",
+    "description": "diff.ai is an AI-powered tool that generates differences between two given topics in Markdown format. It also has an option to create acronyms for parameters inside the table. It's made with Next.js 14, Shadcn for UI, Vercel AI-SDK, and deployed on Vercel.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "chatgpt-for-farnam-street",
+    "url": "https://github.com/rdone4425/chatgpt-for-farnam-street",
+    "cloneUrl": "https://github.com/rdone4425/chatgpt-for-farnam-street.git",
+    "description": "AskFS is an AI-powered question answering system that uses ChatGPT embeddings to provide answers to questions based on Farnam Street's blog content. Powered by Supabase backend, deployed on Vercel, and built with Next.js.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "pinecone-langchain-harperdb-chatbot",
+    "url": "https://github.com/rdone4425/pinecone-langchain-harperdb-chatbot",
+    "cloneUrl": "https://github.com/rdone4425/pinecone-langchain-harperdb-chatbot.git",
+    "description": "A template of AI Chatbot built with Pinecone, LangChain, HarperDB and Next.js, deployed to Vercel.",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  },
+  {
+    "name": "Tool",
+    "url": "https://github.com/rdone4425/Tool",
+    "cloneUrl": "https://github.com/rdone4425/Tool.git",
+    "description": "Ownuse for Clash, Egern, Loon, QuantumultX, Shadorocket, Stash, Surfboard, Surge",
+    "savedAt": "2025-06-08T14:35:30.222Z"
+  }
+]
