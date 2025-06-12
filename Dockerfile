@@ -18,9 +18,10 @@ ENV PORT=3000
 # 创建必要的目录
 RUN mkdir -p /app/logs /app/watched
 
-# 添加entrypoint脚本
+# 添加entrypoint脚本并确保它有正确的行尾格式
 COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # 暴露端口
 EXPOSE 3000

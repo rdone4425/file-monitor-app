@@ -57,24 +57,38 @@
 
 ### Docker 安装
 
-1. 构建 Docker 镜像：
-   ```bash
-   docker build -t file-monitor-app .
-   ```
+#### 构建镜像
 
-2. 运行 Docker 容器：
-   ```bash
-   docker run -d \
-     -v /path/to/watch:/app/watched \
-     -e WATCH_PATH=/app/watched \
-     -e GITHUB_TOKEN=your_personal_access_token \
-     -e GITHUB_USERNAME=your_github_username \
-     -e GITHUB_REPO=your_repo_name \
-     -e GITHUB_BRANCH=main \
-     -e COMMIT_MESSAGE="Auto-commit: 文件更新" \
-     --name file-monitor \
-     file-monitor-app
-   ```
+```bash
+docker build -t file-monitor-app .
+```
+
+#### 运行容器
+
+```bash
+# 基本运行命令（映射3000端口）
+docker run -d --name file-monitor-app -p 3000:3000 file-monitor-app
+
+# 如果要挂载本地目录到容器中
+docker run -d --name file-monitor-app \
+  -p 3000:3000 \
+  -v /本地路径/watched:/app/watched \
+  -v /本地路径/logs:/app/logs \
+  file-monitor-app
+
+# 如果要设置环境变量
+docker run -d --name file-monitor-app \
+  -p 3000:3000 \
+  -e GITHUB_TOKEN=your_github_token \
+  -e GITHUB_USERNAME=your_github_username \
+  file-monitor-app
+```
+
+#### 使用 Docker Compose
+
+```bash
+docker-compose up -d
+```
 
 ## 使用说明
 
