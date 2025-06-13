@@ -599,12 +599,21 @@ export async function startServer(port = 3000) {
   app.use(bodyParser.json());
   app.use(express.static(path.join(appRoot, 'public')));
   
+  // 健康检查端点
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
   // 添加全局辅助函数
   app.use((req, res, next) => {
     res.locals.formatFileSize = formatFileSize;
     next();
   });
-  
+
   // 仪表盘页面 - 获取项目列表
   app.get('/', async (req, res) => {
     try {
@@ -1430,10 +1439,10 @@ export async function startServer(port = 3000) {
   });
   
   // 启动服务器
-  app.listen(port, () => {
+  app.listen(port, '0.0.0.0', () => {
     logger.info(`服务器已启动，正在监听端口 ${port}`);
     logger.info(`访问 http://localhost:${port} 进入管理界面`);
-    
+
     // 启动所有活跃项目的监控
     startAllActiveProjects();
   });
