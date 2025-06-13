@@ -4,6 +4,7 @@ import path from 'path';
 import FormData from 'form-data';
 import mime from 'mime-types';
 import { logger } from './logger.js';
+import { RetryHandler, ErrorClassifier } from './retry-handler.js';
 
 /**
  * GitHub API 服务类
@@ -35,21 +36,27 @@ export class GitHubApiService {
    */
   async validateToken() {
     try {
-      const response = await axios.get(`${this.baseUrl}/user`, {
-        headers: this.headers
-      });
-      
+      const response = await RetryHandler.executeWithRetry(
+        () => axios.get(`${this.baseUrl}/user`, { headers: this.headers }),
+        {
+          maxRetries: 2,
+          baseDelay: 1000,
+          retryCondition: RetryHandler.githubRetryCondition
+        }
+      );
+
       logger.info(`Token 验证成功，用户: ${response.data.login}`);
-      
+
       // 验证是否与提供的用户名匹配
       if (response.data.login !== this.username) {
         logger.warn(`Token 所属用户 (${response.data.login}) 与提供的用户名 (${this.username}) 不匹配`);
         return false;
       }
-      
+
       return true;
     } catch (error) {
-      logger.error(`Token 验证失败: ${error.message}`);
+      const errorReport = ErrorClassifier.generateReport(error);
+      logger.error(`Token 验证失败:\n${errorReport}`);
       return false;
     }
   }
@@ -105,36 +112,50 @@ export class GitHubApiService {
    */
   async uploadFile(localFilePath, repoFilePath, message) {
     try {
-      // 读取文件内容
-      const content = await fs.readFile(localFilePath);
-      const base64Content = content.toString('base64');
-      
-      // 获取文件的当前 SHA（如果存在）
-      const { sha } = await this.getFileContent(repoFilePath);
-      
-      // 构建请求体
-      const requestBody = {
-        message,
-        content: base64Content,
-        branch: this.branch
-      };
-      
-      // 如果文件已存在，添加 SHA
-      if (sha) {
-        requestBody.sha = sha;
-      }
-      
-      // 发送请求
-      const response = await axios.put(
-        `${this.baseUrl}/repos/${this.username}/${this.repo}/contents/${encodeURIComponent(repoFilePath)}`,
-        requestBody,
-        { headers: this.headers }
+      // 使用重试机制执行上传
+      const response = await RetryHandler.executeWithRetry(
+        async () => {
+          // 读取文件内容
+          const content = await fs.readFile(localFilePath);
+          const base64Content = content.toString('base64');
+
+          // 获取文件的当前 SHA（如果存在）
+          const { sha } = await this.getFileContent(repoFilePath);
+
+          // 构建请求体
+          const requestBody = {
+            message,
+            content: base64Content,
+            branch: this.branch
+          };
+
+          // 如果文件已存在，添加 SHA
+          if (sha) {
+            requestBody.sha = sha;
+          }
+
+          // 发送请求
+          return await axios.put(
+            `${this.baseUrl}/repos/${this.username}/${this.repo}/contents/${encodeURIComponent(repoFilePath)}`,
+            requestBody,
+            { headers: this.headers }
+          );
+        },
+        {
+          maxRetries: 3,
+          baseDelay: 2000,
+          retryCondition: RetryHandler.githubRetryCondition,
+          onRetry: (error, attempt) => {
+            logger.warn(`文件 ${repoFilePath} 上传重试 (第 ${attempt} 次): ${error.message}`);
+          }
+        }
       );
-      
+
       logger.info(`文件 ${repoFilePath} 上传成功`);
       return response.data;
     } catch (error) {
-      logger.error(`上传文件失败 ${repoFilePath}: ${error.message}`);
+      const errorReport = ErrorClassifier.generateReport(error);
+      logger.error(`上传文件失败 ${repoFilePath}:\n${errorReport}`);
       throw error;
     }
   }

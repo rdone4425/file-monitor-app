@@ -1,4 +1,4 @@
-FROM --platform=linux/arm64 node:18-alpine
+FROM node:18-alpine
 
 # 创建应用目录
 WORKDIR /app

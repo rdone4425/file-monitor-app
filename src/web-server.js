@@ -7,6 +7,11 @@ import { existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { logger } from './logger.js';
 import { GitHubApiService } from './github-api.js';
+import { ConfigValidator } from './config-validator.js';
+import { performanceMonitor } from './performance-monitor.js';
+import { FileFilter } from './file-filter.js';
+import { notificationSystem } from './notification-system.js';
+import { authMiddleware } from './auth-middleware.js';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import os from 'os';
@@ -56,7 +61,7 @@ async function startMonitoringTask(project) {
   try {
     if (activeMonitoringTasks.has(project.id)) {
       logger.info(`项目 "${project.name}" 的监控任务已存在，先停止旧任务`);
-      stopMonitoringTask(project.id);
+      await stopMonitoringTask(project.id);
     }
     
     // 验证路径存在
@@ -85,12 +90,20 @@ async function startMonitoringTask(project) {
     }
     
     // 忽略的文件/文件夹模式
-    const ignoredPatterns = project.ignoredPatterns 
-      ? project.ignoredPatterns.split(',') 
+    const ignoredPatterns = project.ignoredPatterns
+      ? project.ignoredPatterns.split(',')
       : ['node_modules', '.git', '*.tmp'];
-    
+
     // 配置延迟提交时间（毫秒）
     const debounceTime = 2000;
+
+    // 创建文件过滤器
+    const fileFilter = new FileFilter({
+      maxFileSize: project.maxFileSize || 50 * 1024 * 1024, // 50MB 默认
+      ignoredPatterns: ignoredPatterns,
+      blockedExtensions: ['.exe', '.dll', '.so', '.dylib', '.bin'],
+      allowedExtensions: project.allowedExtensions ? project.allowedExtensions.split(',') : []
+    });
     
     let githubService = null;
     
@@ -131,7 +144,17 @@ async function startMonitoringTask(project) {
     const watcher = createWatcher(project.path, ignoredPatterns, debounceTime, async (changedFiles) => {
       try {
         logger.info(`项目 "${project.name}" 检测到文件变化: ${changedFiles.length} 个文件被修改`);
-        
+
+        // 记录文件变化到性能监控
+        performanceMonitor.recordFileChanges(changedFiles.length);
+
+        // 发送文件变化通知
+        await notificationSystem.notify('file_change', {
+          projectName: project.name,
+          fileCount: changedFiles.length,
+          files: changedFiles.map(f => path.basename(f))
+        });
+
         // 如果GitHub集成不可用，只记录变化但不上传
         if (!githubIntegrationEnabled || !githubService) {
           logger.info(`项目 "${project.name}" 检测到文件变化，但由于GitHub集成不可用，文件未上传`);
@@ -141,28 +164,67 @@ async function startMonitoringTask(project) {
         }
         
         if (changedFiles.length > 0) {
-          // 准备上传文件
-          const filesToUpload = changedFiles
-            .filter(file => fs_sync.existsSync(file)) // 过滤掉已删除的文件
-            .map(file => {
-              // 如果监控的是单个文件，直接使用文件名作为仓库路径
-              const repoPath = isFile ? path.basename(file) : getRelativePath(file, project.path);
-              return {
-                localPath: file,
-                repoPath: repoPath
-              };
+          // 过滤文件
+          const existingFiles = changedFiles.filter(file => fs_sync.existsSync(file));
+          const filterResult = await fileFilter.filterFiles(existingFiles);
+
+          logger.info(`项目 "${project.name}" 文件过滤结果: ${filterResult.stats.allowed} 允许, ${filterResult.stats.filtered} 过滤`);
+
+          // 记录被过滤的文件
+          if (filterResult.filtered.length > 0) {
+            logger.debug(`被过滤的文件:`);
+            filterResult.filtered.forEach(f => {
+              logger.debug(`  - ${f.path}: ${f.reason}`);
             });
+          }
+
+          // 准备上传文件
+          const filesToUpload = filterResult.allowed.map(file => {
+            // 如果监控的是单个文件，直接使用文件名作为仓库路径
+            const repoPath = isFile ? path.basename(file.path) : getRelativePath(file.path, project.path);
+            return {
+              localPath: file.path,
+              repoPath: repoPath
+            };
+          });
           
           // 上传文件
           if (filesToUpload.length > 0) {
+            const uploadStartTime = Date.now();
             const uploadResults = await githubService.uploadFiles(filesToUpload, project.commitMessage);
-            
+            const uploadTime = Date.now() - uploadStartTime;
+
             // 输出上传结果
             const successCount = uploadResults.filter(r => r.success).length;
             const failCount = uploadResults.length - successCount;
-            
-            logger.info(`项目 "${project.name}" 上传完成: ${successCount} 成功, ${failCount} 失败`);
-            
+
+            logger.info(`项目 "${project.name}" 上传完成: ${successCount} 成功, ${failCount} 失败，耗时: ${uploadTime}ms`);
+
+            // 记录性能数据
+            if (successCount > 0) {
+              performanceMonitor.recordUploadSuccess(uploadTime);
+
+              // 发送上传成功通知
+              await notificationSystem.notify('upload_success', {
+                projectName: project.name,
+                repository: `${githubUsername}/${project.repo}`,
+                successCount,
+                failedCount: failCount,
+                uploadTime
+              });
+            }
+            if (failCount > 0) {
+              performanceMonitor.recordUploadFailure();
+
+              // 发送上传失败通知
+              await notificationSystem.notify('upload_failed', {
+                projectName: project.name,
+                repository: `${githubUsername}/${project.repo}`,
+                errorMessage: `${failCount} 个文件上传失败`,
+                retryCount: 0
+              });
+            }
+
             // 记录失败的文件
             if (failCount > 0) {
               uploadResults
@@ -204,6 +266,14 @@ async function startMonitoringTask(project) {
     });
     
     logger.info(`项目 "${project.name}" 监控已启动，等待文件变化...`);
+
+    // 发送项目启动通知
+    await notificationSystem.notify('project_started', {
+      projectName: project.name,
+      path: project.path,
+      repository: githubIntegrationEnabled ? `${githubUsername}/${project.repo}` : '未配置'
+    });
+
     return true;
   } catch (error) {
     logger.error(`启动项目 "${project.name}" 监控失败: ${error.message}`);
@@ -216,22 +286,29 @@ async function startMonitoringTask(project) {
  * @param {string} projectId - 项目ID
  * @returns {boolean} - 是否成功停止
  */
-function stopMonitoringTask(projectId) {
+async function stopMonitoringTask(projectId) {
   try {
     if (!activeMonitoringTasks.has(projectId)) {
-      logger.warn(`找不到项目ID为 ${projectId} 的监控任务`);
+      logger.warn(`尝试停止不存在的监控任务: ${projectId}`);
       return false;
     }
     
     const { watcher, project } = activeMonitoringTasks.get(projectId);
     
-    // 关闭监控
+    // 停止文件监控
     watcher.close();
     
     // 从活跃任务中移除
     activeMonitoringTasks.delete(projectId);
     
     logger.info(`项目 "${project.name}" 的监控已停止`);
+
+    // 发送项目停止通知
+    await notificationSystem.notify('project_stopped', {
+      projectName: project.name,
+      reason: '手动停止'
+    });
+
     return true;
   } catch (error) {
     logger.error(`停止项目监控失败: ${error.message}`);
@@ -564,6 +641,14 @@ export async function startServer(port = 3000) {
     logger.error("应用程序初始化失败，无法启动服务器");
     process.exit(1);
   }
+
+  // 验证配置
+  logger.info("正在验证配置...");
+  const configValidation = ConfigValidator.logValidationResult();
+
+  if (!configValidation.isValid) {
+    logger.warn("配置验证失败，但应用将继续启动。请检查配置以确保功能正常。");
+  }
   
   // 首先检查环境变量，并输出状态信息
   const githubToken = process.env.GITHUB_TOKEN || '';
@@ -606,6 +691,97 @@ export async function startServer(port = 3000) {
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
+  });
+
+  // 性能监控 API (需要认证)
+  app.get('/api/performance', authMiddleware.requireApiKey(['read']), (req, res) => {
+    try {
+      const stats = performanceMonitor.getStats();
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      logger.error(`获取性能数据失败: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: '获取性能数据失败'
+      });
+    }
+  });
+
+  // 配置验证 API
+  app.get('/api/config/validate', (req, res) => {
+    try {
+      const validation = ConfigValidator.validateEnvironmentConfig();
+      res.json({
+        success: true,
+        data: validation
+      });
+    } catch (error) {
+      logger.error(`配置验证失败: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: '配置验证失败'
+      });
+    }
+  });
+
+  // 通知系统状态 API
+  app.get('/api/notifications/status', (req, res) => {
+    try {
+      const status = notificationSystem.getStatus();
+      res.json({
+        success: true,
+        data: status
+      });
+    } catch (error) {
+      logger.error(`获取通知状态失败: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: '获取通知状态失败'
+      });
+    }
+  });
+
+  // 测试通知 API (需要管理员权限)
+  app.post('/api/notifications/test', authMiddleware.requireApiKey(['admin']), async (req, res) => {
+    try {
+      const { provider = 'webhook' } = req.body;
+
+      const result = await notificationSystem.notify('system_error', {
+        errorMessage: '这是一个测试通知',
+        timestamp: new Date().toISOString()
+      }, [provider]);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      logger.error(`发送测试通知失败: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: '发送测试通知失败: ' + error.message
+      });
+    }
+  });
+
+  // 认证统计 API (需要管理员权限)
+  app.get('/api/auth/stats', authMiddleware.requireApiKey(['admin']), (req, res) => {
+    try {
+      const stats = authMiddleware.getStats();
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      logger.error(`获取认证统计失败: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: '获取认证统计失败'
+      });
+    }
   });
 
   // 添加全局辅助函数
@@ -970,7 +1146,7 @@ export async function startServer(port = 3000) {
         await startMonitoringTask(project);
       } else {
         // 停止监控
-        stopMonitoringTask(projectId);
+        await stopMonitoringTask(projectId);
       }
       
       res.json({ 
@@ -1016,7 +1192,7 @@ export async function startServer(port = 3000) {
       const project = projects[projectIndex];
       if (project.status === 'active') {
         // 停止监控
-        stopMonitoringTask(projectId);
+        await stopMonitoringTask(projectId);
         logger.info(`已停止并删除项目 "${project.name}" 的监控`);
       }
       
@@ -1051,10 +1227,120 @@ export async function startServer(port = 3000) {
       debounceTime: process.env.DEBOUNCE_TIME || '2000',
       logLevel: process.env.LOG_LEVEL || 'info'
     };
-    
-    res.render('config', { config, saved: false });
+
+    res.render('config', {
+      title: '配置',
+      activePage: 'config',
+      config,
+      saved: false
+    });
   });
-  
+
+  // 保存配置
+  app.post('/config', async (req, res) => {
+    try {
+      const {
+        githubToken,
+        githubUsername,
+        githubRepo,
+        watchPath,
+        githubBranch,
+        commitMessage,
+        ignoredPatterns,
+        debounceTime,
+        logLevel
+      } = req.body;
+
+      // 构建新的环境变量内容
+      const envContent = `# GitHub 配置
+GITHUB_TOKEN=${githubToken || ''}
+GITHUB_USERNAME=${githubUsername || ''}
+GITHUB_REPO=${githubRepo || ''}
+GITHUB_BRANCH=${githubBranch || 'main'}
+
+# 要监控的路径
+WATCH_PATH=${watchPath || ''}
+
+# 自动提交消息
+COMMIT_MESSAGE=${commitMessage || 'Auto-commit: 文件更新'}
+
+# 忽略的文件/文件夹模式（逗号分隔）
+IGNORED_PATTERNS=${ignoredPatterns || 'node_modules,.git,*.tmp'}
+
+# 防抖时间（毫秒）
+DEBOUNCE_TIME=${debounceTime || '2000'}
+
+# 日志级别 (error, warn, info, verbose, debug, silly)
+LOG_LEVEL=${logLevel || 'info'}
+
+# 服务器端口
+PORT=3000`;
+
+      // 保存到 .env 文件
+      const envPath = path.join(appRoot, '.env');
+      await fs.writeFile(envPath, envContent);
+
+      // 更新当前进程的环境变量
+      process.env.GITHUB_TOKEN = githubToken || '';
+      process.env.GITHUB_USERNAME = githubUsername || '';
+      process.env.GITHUB_REPO = githubRepo || '';
+      process.env.WATCH_PATH = watchPath || '';
+      process.env.GITHUB_BRANCH = githubBranch || 'main';
+      process.env.COMMIT_MESSAGE = commitMessage || 'Auto-commit: 文件更新';
+      process.env.IGNORED_PATTERNS = ignoredPatterns || 'node_modules,.git,*.tmp';
+      process.env.DEBOUNCE_TIME = debounceTime || '2000';
+      process.env.LOG_LEVEL = logLevel || 'info';
+
+      logger.info('配置已保存并更新');
+
+      // 验证新配置
+      const validation = ConfigValidator.validateEnvironmentConfig();
+      if (!validation.isValid) {
+        logger.warn('保存的配置存在问题:');
+        validation.errors.forEach(error => logger.warn(`- ${error}`));
+      }
+
+      // 重新渲染页面，显示保存成功消息
+      const config = {
+        githubToken: githubToken || '',
+        githubUsername: githubUsername || '',
+        githubRepo: githubRepo || '',
+        watchPath: watchPath || '',
+        githubBranch: githubBranch || 'main',
+        commitMessage: commitMessage || 'Auto-commit: 文件更新',
+        ignoredPatterns: ignoredPatterns || 'node_modules,.git,*.tmp',
+        debounceTime: debounceTime || '2000',
+        logLevel: logLevel || 'info'
+      };
+
+      res.render('config', {
+        title: '配置',
+        activePage: 'config',
+        config,
+        saved: true,
+        validation
+      });
+
+    } catch (error) {
+      logger.error(`保存配置失败: ${error.message}`);
+      res.status(500).render('config', {
+        title: '配置',
+        activePage: 'config',
+        config: req.body,
+        saved: false,
+        error: '保存配置失败: ' + error.message
+      });
+    }
+  });
+
+  // 性能监控页面
+  app.get('/performance', (req, res) => {
+    res.render('performance', {
+      title: '性能监控',
+      activePage: 'performance'
+    });
+  });
+
   // 测试页面
   app.get('/test', async (req, res) => {
     try {

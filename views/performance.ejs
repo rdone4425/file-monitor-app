@@ -1,0 +1,232 @@
+<%- include('header') %>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-line"></i> 性能监控</h2>
+        <button class="btn btn-outline-secondary" onclick="refreshData()">
+          <i class="fas fa-sync-alt"></i> 刷新数据
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 概览卡片 -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card bg-primary text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">运行时间</h6>
+              <h4 id="uptime">-</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-clock fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-success text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">文件变化</h6>
+              <h4 id="fileChanges">-</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-file-alt fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-info text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">上传成功率</h6>
+              <h4 id="successRate">-</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-upload fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <div>
+              <h6 class="card-title">平均上传时间</h6>
+              <h4 id="avgUploadTime">-</h4>
+            </div>
+            <div class="align-self-center">
+              <i class="fas fa-stopwatch fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详细统计 -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-server"></i> 系统信息</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-sm">
+            <tbody id="systemInfo">
+              <tr><td colspan="2" class="text-center">加载中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-chart-bar"></i> 上传统计</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-sm">
+            <tbody id="uploadStats">
+              <tr><td colspan="2" class="text-center">加载中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内存使用图表 -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-memory"></i> 内存使用趋势</h5>
+        </div>
+        <div class="card-body">
+          <canvas id="memoryChart" width="400" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let memoryChart;
+
+// 初始化图表
+function initChart() {
+  const ctx = document.getElementById('memoryChart').getContext('2d');
+  memoryChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: '进程内存 (MB)',
+        data: [],
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: '内存使用 (MB)'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: '时间'
+          }
+        }
+      }
+    }
+  });
+}
+
+// 刷新数据
+async function refreshData() {
+  try {
+    const response = await fetch('/api/performance');
+    const result = await response.json();
+    
+    if (result.success) {
+      const data = result.data;
+      
+      // 更新概览卡片
+      document.getElementById('uptime').textContent = data.uptime.formatted;
+      document.getElementById('fileChanges').textContent = data.fileChanges.toLocaleString();
+      document.getElementById('successRate').textContent = data.uploads.successRate + '%';
+      document.getElementById('avgUploadTime').textContent = data.performance.averageUploadTime + 'ms';
+      
+      // 更新系统信息
+      const systemInfo = document.getElementById('systemInfo');
+      systemInfo.innerHTML = `
+        <tr><td>平台</td><td>${data.system.platform}</td></tr>
+        <tr><td>架构</td><td>${data.system.arch}</td></tr>
+        <tr><td>Node.js 版本</td><td>${data.system.nodeVersion}</td></tr>
+        <tr><td>CPU 核心数</td><td>${data.system.cpuCount}</td></tr>
+        <tr><td>总内存</td><td>${data.system.totalMemory} MB</td></tr>
+        <tr><td>可用内存</td><td>${data.system.freeMemory} MB</td></tr>
+        <tr><td>负载平均值</td><td>${data.system.loadAverage.map(l => l.toFixed(2)).join(', ')}</td></tr>
+      `;
+      
+      // 更新上传统计
+      const uploadStats = document.getElementById('uploadStats');
+      uploadStats.innerHTML = `
+        <tr><td>总上传次数</td><td>${data.uploads.total}</td></tr>
+        <tr><td>成功次数</td><td class="text-success">${data.uploads.success}</td></tr>
+        <tr><td>失败次数</td><td class="text-danger">${data.uploads.failed}</td></tr>
+        <tr><td>成功率</td><td>${data.uploads.successRate}%</td></tr>
+        <tr><td>总上传时间</td><td>${data.performance.totalUploadTime}ms</td></tr>
+        <tr><td>最后活动</td><td>${data.lastActivity.formatted}</td></tr>
+      `;
+      
+      // 更新内存图表
+      if (data.history.memory && data.history.memory.length > 0) {
+        const labels = data.history.memory.map(m => new Date(m.timestamp).toLocaleTimeString());
+        const memoryData = data.history.memory.map(m => m.process.rss);
+        
+        memoryChart.data.labels = labels;
+        memoryChart.data.datasets[0].data = memoryData;
+        memoryChart.update();
+      }
+      
+    } else {
+      console.error('获取性能数据失败:', result.error);
+    }
+  } catch (error) {
+    console.error('刷新数据失败:', error);
+  }
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+  initChart();
+  refreshData();
+  
+  // 每30秒自动刷新一次
+  setInterval(refreshData, 30000);
+});
+</script>
+
+<%- include('footer') %>
