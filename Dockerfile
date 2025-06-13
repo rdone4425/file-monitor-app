@@ -14,9 +14,6 @@ RUN mkdir -p /app/logs /app/watched
 # 复制应用源代码
 COPY . .
 
-# 设置脚本权限
-RUN chmod +x start-debug.sh
-
 # 设置环境变量
 ENV NODE_ENV=production
 ENV PORT=3000
