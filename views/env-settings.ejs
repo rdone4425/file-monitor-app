@@ -1,0 +1,414 @@
+<%- include('header', { title: '环境变量设置', activePage: 'env-settings' }) %>
+
+<div class="container mt-4">
+    <% if (setupMode) { %>
+        <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+            <strong><i class="fas fa-info-circle me-2"></i> 欢迎使用文件监控应用</strong>
+            <p class="mb-0 mt-2">这是您首次访问系统，请在下方设置一个应用程序密码以保护您的系统安全。</p>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <% } %>
+    
+    <!-- 密码设置卡片 -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-key me-2"></i>应用程序密码设置</h5>
+        </div>
+        <div class="card-body">
+            <% if (pwdMessage) { %>
+                <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                    <%= pwdMessage %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% } %>
+            <% if (pwdError) { %>
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <%= pwdError %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% } %>
+            <form id="passwordForm" action="/api/change-password" method="post">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">设置新密码</label>
+                            <input type="password" class="form-control" id="newPassword" name="newPassword" 
+                                placeholder="输入新密码" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">确认新密码</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" 
+                                placeholder="再次输入新密码" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-text">
+                        <% if (passwordConfigured) { %>
+                            当前已设置密码。修改密码后需要重新登录系统。
+                        <% } else { %>
+                            当前未设置密码。设置密码后，访问系统将需要密码验证。
+                        <% } %>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary">
+                        <% if (passwordConfigured) { %>更新密码<% } else { %>设置密码<% } %>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">环境变量配置</h5>
+            <div>
+                <button id="saveBtn" class="btn btn-primary">保存更改</button>
+                <button id="resetBtn" class="btn btn-secondary ms-2">重置</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <% if (saved) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    环境变量已成功保存！
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% } %>
+            
+            <% if (error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <%= error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <% } %>
+
+            <div class="mb-3">
+                <div class="form-text mb-2">
+                    这里您可以配置应用的环境变量。这些设置将被保存到 .env 文件中。
+                    <strong>注意：</strong> 某些变更可能需要重启应用才能生效。
+                </div>
+            </div>
+
+            <form id="envForm" action="/api/env/save" method="post">
+                <div class="row">
+                    <!-- GitHub 设置 -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">GitHub 设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="GITHUB_TOKEN" class="form-label">GitHub 访问令牌</label>
+                                    <input type="password" class="form-control" id="GITHUB_TOKEN" name="GITHUB_TOKEN" 
+                                        value="<%= env.GITHUB_TOKEN || '' %>" 
+                                        placeholder="输入您的 GitHub 个人访问令牌">
+                                    <div class="form-text">需要 repo 范围权限的个人访问令牌</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="GITHUB_USERNAME" class="form-label">GitHub 用户名</label>
+                                    <input type="text" class="form-control" id="GITHUB_USERNAME" name="GITHUB_USERNAME" 
+                                        value="<%= env.GITHUB_USERNAME || '' %>"
+                                        placeholder="您的 GitHub 用户名">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="GITHUB_REPO" class="form-label">默认仓库名称</label>
+                                    <input type="text" class="form-control" id="GITHUB_REPO" name="GITHUB_REPO" 
+                                        value="<%= env.GITHUB_REPO || '' %>"
+                                        placeholder="默认仓库名称">
+                                    <div class="form-text">新建项目时的默认仓库</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="GITHUB_BRANCH" class="form-label">默认分支</label>
+                                    <input type="text" class="form-control" id="GITHUB_BRANCH" name="GITHUB_BRANCH" 
+                                        value="<%= env.GITHUB_BRANCH || 'main' %>"
+                                        placeholder="main">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 监控设置 -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">监控设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="WATCH_PATH" class="form-label">默认监控路径</label>
+                                    <input type="text" class="form-control" id="WATCH_PATH" name="WATCH_PATH" 
+                                        value="<%= env.WATCH_PATH || '' %>"
+                                        placeholder="/path/to/watch">
+                                    <div class="form-text">新建项目时的默认监控路径</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="IGNORED_PATTERNS" class="form-label">忽略的文件模式</label>
+                                    <input type="text" class="form-control" id="IGNORED_PATTERNS" name="IGNORED_PATTERNS" 
+                                        value="<%= env.IGNORED_PATTERNS || 'node_modules,.git,*.tmp' %>"
+                                        placeholder="node_modules,.git,*.tmp">
+                                    <div class="form-text">用逗号分隔的忽略模式</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="DEBOUNCE_TIME" class="form-label">防抖时间 (毫秒)</label>
+                                    <input type="number" class="form-control" id="DEBOUNCE_TIME" name="DEBOUNCE_TIME" 
+                                        value="<%= env.DEBOUNCE_TIME || 2000 %>"
+                                        placeholder="2000">
+                                    <div class="form-text">文件变化后等待多久才上传</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="COMMIT_MESSAGE" class="form-label">默认提交信息</label>
+                                    <input type="text" class="form-control" id="COMMIT_MESSAGE" name="COMMIT_MESSAGE" 
+                                        value="<%= env.COMMIT_MESSAGE || 'Auto-commit: 文件更新' %>"
+                                        placeholder="Auto-commit: 文件更新">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 安全设置 -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">安全设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="APP_PASSWORD" class="form-label">应用程序密码</label>
+                                    <input type="password" class="form-control" id="APP_PASSWORD" name="APP_PASSWORD" 
+                                        value="<%= env.APP_PASSWORD || '' %>"
+                                        placeholder="设置Web界面的访问密码" disabled>
+                                    <div class="form-text text-danger">为了安全起见，请使用页面顶部的"应用程序密码设置"专用区域来设置或修改密码</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="SESSION_SECRET" class="form-label">会话密钥</label>
+                                    <input type="text" class="form-control" id="SESSION_SECRET" name="SESSION_SECRET" 
+                                        value="<%= env.SESSION_SECRET || '' %>"
+                                        placeholder="随机字符串">
+                                    <div class="form-text">用于加密会话数据的密钥</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="API_KEY" class="form-label">API密钥</label>
+                                    <input type="text" class="form-control" id="API_KEY" name="API_KEY" 
+                                        value="<%= env.API_KEY || '' %>"
+                                        placeholder="API访问密钥">
+                                    <div class="form-text">用于API访问的密钥</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ADMIN_API_KEY" class="form-label">管理员API密钥</label>
+                                    <input type="text" class="form-control" id="ADMIN_API_KEY" name="ADMIN_API_KEY" 
+                                        value="<%= env.ADMIN_API_KEY || '' %>"
+                                        placeholder="管理员API访问密钥">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 系统设置 -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">系统设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="LOG_LEVEL" class="form-label">日志级别</label>
+                                    <select class="form-select" id="LOG_LEVEL" name="LOG_LEVEL">
+                                        <option value="error" <%= env.LOG_LEVEL === 'error' ? 'selected' : '' %>>错误</option>
+                                        <option value="warn" <%= env.LOG_LEVEL === 'warn' ? 'selected' : '' %>>警告</option>
+                                        <option value="info" <%= env.LOG_LEVEL === 'info' || !env.LOG_LEVEL ? 'selected' : '' %>>信息</option>
+                                        <option value="verbose" <%= env.LOG_LEVEL === 'verbose' ? 'selected' : '' %>>详细</option>
+                                        <option value="debug" <%= env.LOG_LEVEL === 'debug' ? 'selected' : '' %>>调试</option>
+                                        <option value="silly" <%= env.LOG_LEVEL === 'silly' ? 'selected' : '' %>>超详细</option>
+                                    </select>
+                                    <div class="form-text">日志输出的详细程度</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="NODE_ENV" class="form-label">运行环境</label>
+                                    <select class="form-select" id="NODE_ENV" name="NODE_ENV">
+                                        <option value="development" <%= !env.NODE_ENV || env.NODE_ENV === 'development' ? 'selected' : '' %>>开发环境</option>
+                                        <option value="production" <%= env.NODE_ENV === 'production' ? 'selected' : '' %>>生产环境</option>
+                                    </select>
+                                    <div class="form-text">设置为生产环境会启用额外的安全特性</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="PORT" class="form-label">监听端口</label>
+                                    <input type="number" class="form-control" id="PORT" name="PORT" 
+                                        value="<%= env.PORT || 3000 %>"
+                                        placeholder="3000">
+                                    <div class="form-text">应用程序监听的端口号</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="ENABLE_DEBUG" name="ENABLE_DEBUG" 
+                                            <%= env.ENABLE_DEBUG === 'true' ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="ENABLE_DEBUG">启用调试模式</label>
+                                    </div>
+                                    <div class="form-text">开启额外的调试信息输出</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 通知设置 -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">通知设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="WEBHOOK_URL" class="form-label">Webhook URL</label>
+                                    <input type="text" class="form-control" id="WEBHOOK_URL" name="WEBHOOK_URL" 
+                                        value="<%= env.WEBHOOK_URL || '' %>"
+                                        placeholder="https://example.com/webhook">
+                                    <div class="form-text">接收事件通知的Webhook地址</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="SLACK_WEBHOOK_URL" class="form-label">Slack Webhook URL</label>
+                                    <input type="text" class="form-control" id="SLACK_WEBHOOK_URL" name="SLACK_WEBHOOK_URL" 
+                                        value="<%= env.SLACK_WEBHOOK_URL || '' %>"
+                                        placeholder="Slack Webhook URL">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="SLACK_CHANNEL" class="form-label">Slack 频道</label>
+                                    <input type="text" class="form-control" id="SLACK_CHANNEL" name="SLACK_CHANNEL" 
+                                        value="<%= env.SLACK_CHANNEL || '#general' %>"
+                                        placeholder="#general">
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="ENABLE_NOTIFICATIONS" name="ENABLE_NOTIFICATIONS" 
+                                            <%= env.ENABLE_NOTIFICATIONS !== 'false' ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="ENABLE_NOTIFICATIONS">启用通知</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 高级设置 -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">高级设置</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    请谨慎修改这些高级设置，错误的配置可能导致应用无法正常工作。
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="rawEnv" class="form-label">原始 .env 内容</label>
+                                    <textarea class="form-control font-monospace" id="rawEnv" name="rawEnv" 
+                                        rows="10" style="font-size: 0.875rem;"><%= rawEnv %></textarea>
+                                    <div class="form-text">直接编辑 .env 文件内容，每行一个变量，格式为 KEY=VALUE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end">
+                    <button type="reset" class="btn btn-secondary me-2">重置</button>
+                    <button type="submit" class="btn btn-primary">保存所有设置</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const envForm = document.getElementById('envForm');
+    const saveBtn = document.getElementById('saveBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const rawEnvTextarea = document.getElementById('rawEnv');
+    
+    // 字段变更时更新原始env文本
+    const updateRawEnv = () => {
+        const formData = new FormData(envForm);
+        const entries = Array.from(formData.entries())
+            .filter(([key]) => key !== 'rawEnv') // 排除rawEnv本身
+            .filter(([_, value]) => value !== '') // 排除空值
+            .map(([key, value]) => {
+                // 处理checkbox类型
+                if (key === 'ENABLE_DEBUG' || key === 'ENABLE_NOTIFICATIONS') {
+                    const checkbox = document.getElementById(key);
+                    return `${key}=${checkbox.checked}`;
+                }
+                return `${key}=${value}`;
+            });
+        
+        rawEnvTextarea.value = entries.join('\n');
+    };
+    
+    // 从原始env文本更新表单字段
+    const updateFormFromRawEnv = () => {
+        const lines = rawEnvTextarea.value.split('\n');
+        for (const line of lines) {
+            if (!line.trim() || line.startsWith('#')) continue;
+            
+            const match = line.match(/^([^=]+)=(.*)$/);
+            if (match) {
+                const [_, key, value] = match;
+                const field = document.getElementById(key);
+                if (field) {
+                    if (field.type === 'checkbox') {
+                        field.checked = value === 'true';
+                    } else {
+                        field.value = value;
+                    }
+                }
+            }
+        }
+    };
+    
+    // 监听表单字段变化
+    envForm.addEventListener('input', (e) => {
+        if (e.target.id !== 'rawEnv') {
+            updateRawEnv();
+        }
+    });
+    
+    // 监听原始env变化
+    rawEnvTextarea.addEventListener('input', () => {
+        updateFormFromRawEnv();
+    });
+    
+    // 保存按钮
+    saveBtn.addEventListener('click', () => {
+        envForm.submit();
+    });
+    
+    // 重置按钮
+    resetBtn.addEventListener('click', () => {
+        envForm.reset();
+        updateRawEnv();
+    });
+
+    // 初始更新
+    updateRawEnv();
+});
+</script>
+
+<%- include('footer') %> 

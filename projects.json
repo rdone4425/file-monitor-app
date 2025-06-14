@@ -1,1 +1,35 @@
-[]
+[
+  {
+    "id": "project1",
+    "name": "文档项目",
+    "path": "C:/Users/zhang/Documents/docs",
+    "repo": "documents-backup",
+    "branch": "main",
+    "commitMessage": "自动备份: 文档更新 [自动]",
+    "ignoredPatterns": "*.tmp,*.bak,~*",
+    "status": "active",
+    "lastUpdate": "2023-07-10T10:30:00.000Z"
+  },
+  {
+    "id": "project2",
+    "name": "源代码项目",
+    "path": "C:/Users/zhang/Projects/myapp/src",
+    "repo": "source-code-backup",
+    "branch": "dev",
+    "commitMessage": "自动备份: 代码更新 [自动]",
+    "ignoredPatterns": "*.exe,*.obj,*.dll,debug/,release/",
+    "status": "active",
+    "lastUpdate": "2023-07-11T15:45:00.000Z"
+  },
+  {
+    "id": "project3",
+    "name": "配置文件",
+    "path": "C:/Users/zhang/AppData/Local/MyApp/config",
+    "repo": "app-config-backup",
+    "branch": "main",
+    "commitMessage": "自动备份: 配置更新 [自动]",
+    "ignoredPatterns": "cache/,temp/",
+    "status": "active",
+    "lastUpdate": "2023-07-12T08:20:00.000Z"
+  }
+]

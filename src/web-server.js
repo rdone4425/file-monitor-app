@@ -18,6 +18,7 @@ import os from 'os';
 import { createWatcher } from './watcher.js';
 import fs_sync from 'fs';
 import { initialize } from './initialize.js';
+import multiFileRoutes from './multi-file-routes.js';
 
 // 获取当前文件的目录
 const __filename = fileURLToPath(import.meta.url);
@@ -33,23 +34,21 @@ dotenv.config();
 const activeMonitoringTasks = new Map();
 
 /**
- * 获取文件相对路径
- * @param {string} filePath - 文件的完整路径
+ * 从绝对路径获取相对路径，并确保使用正确的路径分隔符
+ * @param {string} filePath - 文件绝对路径
  * @param {string} basePath - 基础路径
  * @returns {string} - 相对路径
  */
 function getRelativePath(filePath, basePath) {
-  // 规范化路径
-  const normalizedFilePath = path.normalize(filePath);
-  const normalizedBasePath = path.normalize(basePath);
+  // 确保使用正确的路径分隔符
+  const normalizedFilePath = filePath.replace(/\\/g, path.sep);
+  const normalizedBasePath = basePath.replace(/\\/g, path.sep);
   
   // 获取相对路径
-  let relativePath = path.relative(normalizedBasePath, normalizedFilePath);
+  const relativePath = path.relative(normalizedBasePath, normalizedFilePath);
   
-  // 将反斜杠转换为正斜杠（在 Windows 上）
-  relativePath = relativePath.replace(/\\/g, '/');
-  
-  return relativePath;
+  // 统一使用正斜杠作为路径分隔符（GitHub 使用正斜杠）
+  return relativePath.replace(/\\/g, '/');
 }
 
 /**
@@ -598,13 +597,12 @@ function getSystemInfo() {
 /**
  * 获取系统根目录
  * @param {string} platform - 操作系统平台
- * @returns {string} - 系统根目录
+ * @returns {string[]} - 系统根目录数组
  */
 function getSystemRoots(platform) {
   if (platform === 'win32') {
     // Windows系统，获取所有驱动器
     try {
-      // 原来使用 wmic 命令的方法有问题，改用 Node.js path 模块
       // 常见的 Windows 驱动器盘符
       const possibleDrives = ['A:', 'B:', 'C:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 'M:', 
                              'N:', 'O:', 'P:', 'Q:', 'R:', 'S:', 'T:', 'U:', 'V:', 'W:', 'X:', 'Y:', 'Z:'];
@@ -614,7 +612,7 @@ function getSystemRoots(platform) {
       for (const drive of possibleDrives) {
         try {
           // 尝试检查驱动器是否存在
-          if (existsSync(drive + '\\')) {
+          if (existsSync(drive + path.sep)) {
             drives.push(drive);
           }
         } catch (err) {
@@ -630,7 +628,26 @@ function getSystemRoots(platform) {
     }
   } else {
     // Linux/Mac系统
-    return ['/'];
+    // 检查常见的 Linux 目录
+    const commonDirs = [
+      '/',
+      '/home',
+      '/root',
+      '/var',
+      '/etc',
+      '/usr',
+      '/opt'
+    ];
+    
+    const availableDirs = commonDirs.filter(dir => {
+      try {
+        return existsSync(dir);
+      } catch (err) {
+        return false;
+      }
+    });
+    
+    return availableDirs.length > 0 ? availableDirs : ['/'];
   }
 }
 
@@ -683,6 +700,9 @@ export async function startServer(port = 3000) {
   app.use(bodyParser.urlencoded({ extended: true }));
   app.use(bodyParser.json());
   app.use(express.static(path.join(appRoot, 'public')));
+  
+  // 注册多文件监控路由
+  app.use(multiFileRoutes);
   
   // 健康检查端点
   app.get('/health', (req, res) => {
@@ -827,7 +847,9 @@ export async function startServer(port = 3000) {
       // 使用 EJS 模板渲染页面
       res.render('dashboard-new', { 
         config, 
-        monitoringTasks: projects 
+        monitoringTasks: projects,
+        // 添加多文件监控功能链接
+        showMultiFileLink: true
       });
     } catch (error) {
       logger.error(`渲染仪表盘页面错误: ${error.message}`);
@@ -1431,10 +1453,31 @@ PORT=3000`;
       // 获取目录内容
       let items = [];
       try {
-        items = await fs.readdir(currentPath, { withFileTypes: true });
+        // 修复：确保路径使用正确的分隔符
+        const normalizedPath = currentPath.replace(/\\/g, path.sep);
+        items = await fs.readdir(normalizedPath, { withFileTypes: true });
       } catch (error) {
         logger.error(`读取目录内容错误: ${error.message}`);
-        return res.status(500).send(`无法读取目录内容: ${error.message}`);
+        
+        // 提供更友好的错误信息
+        let errorMessage = `无法读取目录内容: ${error.message}`;
+        
+        // 检查是否是权限问题
+        if (error.code === 'EACCES') {
+          errorMessage = `权限不足，无法访问目录 ${currentPath}。在 Linux 系统中，某些系统目录需要 root 权限才能访问。`;
+        } else if (error.code === 'ENOENT') {
+          errorMessage = `目录 ${currentPath} 不存在。`;
+        }
+        
+        return res.status(error.code === 'EACCES' ? 403 : 500).render('error', {
+          title: '目录访问错误',
+          message: errorMessage,
+          error: {
+            status: error.code === 'EACCES' ? 403 : 500,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : ''
+          },
+          systemInfo
+        });
       }
       
       // 处理目录项

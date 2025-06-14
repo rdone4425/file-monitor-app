@@ -1,0 +1,583 @@
+<%- include('header', { title: '多文件监控管理', activePage: 'multi-file' }) %>
+
+<div class="container-fluid pt-3">
+  <div class="row mb-3">
+    <div class="col">
+      <h3 class="mb-0"><i class="bi bi-collection"></i> 多文件监控管理</h3>
+    </div>
+    <div class="col-auto">
+      <button type="button" class="btn btn-primary" onclick="toggleGroupForm(true)">
+        <i class="bi bi-plus-lg"></i> 新建文件组
+      </button>
+    </div>
+  </div>
+
+  <!-- 新建文件组表单 -->
+  <div id="file-group-form" style="display: none;" class="mb-4">
+    <div class="card">
+      <div class="card-header bg-primary text-white d-flex justify-content-between">
+        <h5 class="mb-0 text-white"><i class="bi bi-folder2-open"></i> 新建文件组</h5>
+        <button type="button" class="btn-close btn-close-white" onclick="toggleGroupForm(false)"></button>
+      </div>
+      <div class="card-body">
+        <form id="fileGroupForm" class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="groupName" class="form-label">组名称 <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="groupName" required>
+            </div>
+            <div class="mb-3">
+              <label for="priority" class="form-label">优先级 <span class="text-danger">*</span></label>
+              <select class="form-select" id="priority" required>
+                <option value="high">高 - 实时监控</option>
+                <option value="medium" selected>中 - 常规监控</option>
+                <option value="low">低 - 低频监控</option>
+              </select>
+              <div class="form-text">优先级决定文件监控和同步的频率</div>
+            </div>
+            <div class="mb-3">
+              <label for="targetRepo" class="form-label">目标仓库 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text"><%= config.githubUsername %>/</span>
+                <input type="text" class="form-control" id="targetRepo" required>
+              </div>
+              <div class="form-text">GitHub 存储库名称</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="ignoredPatterns" class="form-label">忽略的文件模式</label>
+              <input type="text" class="form-control" id="ignoredPatterns" placeholder="node_modules,.git,*.tmp">
+              <div class="form-text">逗号分隔的要忽略的文件模式</div>
+            </div>
+            <div class="mb-3">
+              <label for="commitMessage" class="form-label">提交消息模板</label>
+              <input type="text" class="form-control" id="commitMessage" value="自动备份: [文件组] 文件更新">
+              <div class="form-text">[文件组] 将被替换为组名称</div>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="startMonitoringNow" checked>
+              <label class="form-check-label" for="startMonitoringNow">
+                创建后立即开始监控
+              </label>
+            </div>
+          </div>
+          
+          <div class="col-12 mt-3">
+            <h5><i class="bi bi-files"></i> 文件/目录列表</h5>
+            <p class="text-muted">添加要监控的文件或目录</p>
+            
+            <div id="pathsList" class="mb-3">
+              <div class="path-item mb-2 row">
+                <div class="col-10">
+                  <div class="input-group">
+                    <input type="text" class="form-control path-input" placeholder="文件或目录路径" required>
+                    <button class="btn btn-outline-secondary browse-btn" type="button">浏览</button>
+                  </div>
+                </div>
+                <div class="col-2 d-grid">
+                  <button type="button" class="btn btn-danger remove-path"><i class="bi bi-trash"></i></button>
+                </div>
+              </div>
+            </div>
+            
+            <button type="button" class="btn btn-outline-primary" id="addPathBtn">
+              <i class="bi bi-plus-circle"></i> 添加路径
+            </button>
+          </div>
+          
+          <div class="col-12 mt-4 d-flex justify-content-end">
+            <button type="button" class="btn btn-secondary me-2" onclick="toggleGroupForm(false)">取消</button>
+            <button type="button" class="btn btn-primary" id="saveGroupBtn">创建文件组</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件组列表 -->
+  <div class="row">
+    <div class="col-md-4 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0 d-flex align-items-center">
+            <i class="bi bi-lightning-charge me-2"></i>高优先级
+          </h5>
+        </div>
+        <div class="card-body">
+          <% if (highPriorityGroups && highPriorityGroups.length > 0) { %>
+            <div class="list-group">
+              <% highPriorityGroups.forEach(group => { %>
+                <a href="#" class="list-group-item list-group-item-action" onclick="showGroupDetails('<%= group.id %>')">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1"><%= group.name %></h5>
+                    <small><%= group.paths.length %> 个文件/目录</small>
+                  </div>
+                  <p class="mb-1 text-truncate"><%= group.paths[0] %></p>
+                  <% if (group.paths.length > 1) { %>
+                    <small class="text-muted">及 <%= group.paths.length - 1 %> 个其他路径</small>
+                  <% } %>
+                </a>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <div class="text-center py-4">
+              <i class="bi bi-exclamation-circle text-muted" style="font-size: 2rem;"></i>
+              <p class="mt-2 text-muted">没有高优先级文件组</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0 d-flex align-items-center">
+            <i class="bi bi-clock-history me-2"></i>中优先级
+          </h5>
+        </div>
+        <div class="card-body">
+          <% if (mediumPriorityGroups && mediumPriorityGroups.length > 0) { %>
+            <div class="list-group">
+              <% mediumPriorityGroups.forEach(group => { %>
+                <a href="#" class="list-group-item list-group-item-action" onclick="showGroupDetails('<%= group.id %>')">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1"><%= group.name %></h5>
+                    <small><%= group.paths.length %> 个文件/目录</small>
+                  </div>
+                  <p class="mb-1 text-truncate"><%= group.paths[0] %></p>
+                  <% if (group.paths.length > 1) { %>
+                    <small class="text-muted">及 <%= group.paths.length - 1 %> 个其他路径</small>
+                  <% } %>
+                </a>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <div class="text-center py-4">
+              <i class="bi bi-exclamation-circle text-muted" style="font-size: 2rem;"></i>
+              <p class="mt-2 text-muted">没有中优先级文件组</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0 d-flex align-items-center">
+            <i class="bi bi-hourglass-split me-2"></i>低优先级
+          </h5>
+        </div>
+        <div class="card-body">
+          <% if (lowPriorityGroups && lowPriorityGroups.length > 0) { %>
+            <div class="list-group">
+              <% lowPriorityGroups.forEach(group => { %>
+                <a href="#" class="list-group-item list-group-item-action" onclick="showGroupDetails('<%= group.id %>')">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1"><%= group.name %></h5>
+                    <small><%= group.paths.length %> 个文件/目录</small>
+                  </div>
+                  <p class="mb-1 text-truncate"><%= group.paths[0] %></p>
+                  <% if (group.paths.length > 1) { %>
+                    <small class="text-muted">及 <%= group.paths.length - 1 %> 个其他路径</small>
+                  <% } %>
+                </a>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <div class="text-center py-4">
+              <i class="bi bi-exclamation-circle text-muted" style="font-size: 2rem;"></i>
+              <p class="mt-2 text-muted">没有低优先级文件组</p>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 监控状态 -->
+  <div class="row">
+    <div class="col-md-12 mb-4">
+      <div class="card">
+        <div class="card-header bg-info text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 text-white"><i class="bi bi-activity"></i> 监控状态</h5>
+            <button type="button" class="btn btn-sm btn-light" id="refreshStatusBtn">
+              <i class="bi bi-arrow-clockwise"></i> 刷新
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>组名称</th>
+                  <th>监控路径数</th>
+                  <th>优先级</th>
+                  <th>最后更新</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="monitoringStatus">
+                <% if (allGroups && allGroups.length > 0) { %>
+                  <% allGroups.forEach(group => { %>
+                    <tr>
+                      <td><%= group.name %></td>
+                      <td><%= group.paths.length %></td>
+                      <td>
+                        <span class="badge rounded-pill bg-<%= group.priority === 'high' ? 'danger' : (group.priority === 'medium' ? 'primary' : 'secondary') %>">
+                          <%= group.priority === 'high' ? '高' : (group.priority === 'medium' ? '中' : '低') %>
+                        </span>
+                      </td>
+                      <td><%= group.lastUpdate || '无更新' %></td>
+                      <td>
+                        <% if (group.status === 'active') { %>
+                          <span class="badge bg-success">监控中</span>
+                        <% } else { %>
+                          <span class="badge bg-secondary">已停止</span>
+                        <% } %>
+                      </td>
+                      <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                          <button type="button" class="btn btn-outline-primary" onclick="toggleGroupMonitoring('<%= group.id %>')">
+                            <i class="bi <%= group.status === 'active' ? 'bi-pause-fill' : 'bi-play-fill' %>"></i>
+                          </button>
+                          <button type="button" class="btn btn-outline-info" onclick="showGroupDetails('<%= group.id %>')">
+                            <i class="bi bi-eye"></i>
+                          </button>
+                          <button type="button" class="btn btn-outline-danger" onclick="deleteGroup('<%= group.id %>')">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" class="text-center py-3">
+                      <p class="mb-0 text-muted">尚未创建任何文件组</p>
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 文件组详情模态框 -->
+<div class="modal fade" id="groupDetailsModal" tabindex="-1" aria-labelledby="groupDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="groupDetailsModalLabel">文件组详情</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="groupDetailsBody">
+        <!-- 动态填充内容 -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+        <button type="button" class="btn btn-primary" id="editGroupBtn">编辑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 切换文件组表单显示/隐藏
+function toggleGroupForm(show) {
+  const form = document.getElementById('file-group-form');
+  form.style.display = show ? 'block' : 'none';
+}
+
+// 添加新路径输入框
+document.getElementById('addPathBtn').addEventListener('click', function() {
+  const pathsList = document.getElementById('pathsList');
+  const newItem = document.createElement('div');
+  newItem.className = 'path-item mb-2 row';
+  newItem.innerHTML = `
+    <div class="col-10">
+      <div class="input-group">
+        <input type="text" class="form-control path-input" placeholder="文件或目录路径" required>
+        <button class="btn btn-outline-secondary browse-btn" type="button">浏览</button>
+      </div>
+    </div>
+    <div class="col-2 d-grid">
+      <button type="button" class="btn btn-danger remove-path"><i class="bi bi-trash"></i></button>
+    </div>
+  `;
+  pathsList.appendChild(newItem);
+  
+  // 为新添加的移除按钮绑定事件
+  newItem.querySelector('.remove-path').addEventListener('click', function() {
+    pathsList.removeChild(newItem);
+  });
+  
+  // 为新添加的浏览按钮绑定事件
+  newItem.querySelector('.browse-btn').addEventListener('click', function() {
+    const input = this.parentElement.querySelector('.path-input');
+    browseForPath(input);
+  });
+});
+
+// 初始化为已存在的移除按钮绑定事件
+document.querySelectorAll('.remove-path').forEach(button => {
+  button.addEventListener('click', function() {
+    const pathItem = this.closest('.path-item');
+    pathItem.parentElement.removeChild(pathItem);
+  });
+});
+
+// 初始化为已存在的浏览按钮绑定事件
+document.querySelectorAll('.browse-btn').forEach(button => {
+  button.addEventListener('click', function() {
+    const input = this.parentElement.querySelector('.path-input');
+    browseForPath(input);
+  });
+});
+
+// 浏览目录或文件
+function browseForPath(inputElement) {
+  // 发送AJAX请求打开系统文件选择器
+  fetch('/api/browse-path', {
+    method: 'GET'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.path) {
+      inputElement.value = data.path;
+    }
+  })
+  .catch(error => {
+    console.error('浏览路径出错:', error);
+    alert('无法打开文件选择器');
+  });
+}
+
+// 保存文件组
+document.getElementById('saveGroupBtn').addEventListener('click', function() {
+  const form = document.getElementById('fileGroupForm');
+  
+  // 简单验证
+  const groupName = document.getElementById('groupName').value;
+  const targetRepo = document.getElementById('targetRepo').value;
+  const pathInputs = document.querySelectorAll('.path-input');
+  
+  if (!groupName || !targetRepo) {
+    alert('请填写必要的字段');
+    return;
+  }
+  
+  let hasValidPath = false;
+  const paths = [];
+  
+  pathInputs.forEach(input => {
+    const path = input.value.trim();
+    if (path) {
+      hasValidPath = true;
+      paths.push(path);
+    }
+  });
+  
+  if (!hasValidPath) {
+    alert('至少添加一个有效的文件或目录路径');
+    return;
+  }
+  
+  // 收集表单数据
+  const formData = {
+    name: groupName,
+    priority: document.getElementById('priority').value,
+    targetRepo: targetRepo,
+    ignoredPatterns: document.getElementById('ignoredPatterns').value,
+    commitMessage: document.getElementById('commitMessage').value,
+    startMonitoring: document.getElementById('startMonitoringNow').checked,
+    paths: paths
+  };
+  
+  // 发送请求创建文件组
+  fetch('/api/file-groups', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(formData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('文件组创建成功');
+      window.location.reload(); // 刷新页面
+    } else {
+      alert('创建文件组失败: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('创建文件组出错:', error);
+    alert('服务器错误，无法创建文件组');
+  });
+});
+
+// 显示文件组详情
+function showGroupDetails(groupId) {
+  fetch(`/api/file-groups/${groupId}`, {
+    method: 'GET'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const group = data.group;
+      const modal = new bootstrap.Modal(document.getElementById('groupDetailsModal'));
+      const modalTitle = document.getElementById('groupDetailsModalLabel');
+      const modalBody = document.getElementById('groupDetailsBody');
+      
+      modalTitle.textContent = `文件组: ${group.name}`;
+      
+      // 构建详情内容
+      let detailsHtml = `
+        <div class="mb-3">
+          <div class="d-flex align-items-center mb-2">
+            <span class="badge rounded-pill bg-${group.priority === 'high' ? 'danger' : (group.priority === 'medium' ? 'primary' : 'secondary')} me-2">
+              ${group.priority === 'high' ? '高优先级' : (group.priority === 'medium' ? '中优先级' : '低优先级')}
+            </span>
+            <span class="badge rounded-pill bg-${group.status === 'active' ? 'success' : 'secondary'}">
+              ${group.status === 'active' ? '监控中' : '已停止'}
+            </span>
+          </div>
+          <p><strong>GitHub 仓库:</strong> ${group.targetRepo}</p>
+          <p><strong>最后更新:</strong> ${group.lastUpdate || '无更新'}</p>
+          <p><strong>忽略模式:</strong> ${group.ignoredPatterns || '无'}</p>
+          <p><strong>提交消息:</strong> ${group.commitMessage || '默认消息'}</p>
+        </div>
+        
+        <h6 class="border-bottom pb-2">监控路径列表</h6>
+        <div class="list-group mt-3">
+      `;
+      
+      group.paths.forEach(path => {
+        detailsHtml += `
+          <div class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+              <div>
+                <i class="bi ${path.isDirectory ? 'bi-folder-fill text-primary' : 'bi-file-earmark text-success'}"></i>
+                ${path.path}
+              </div>
+              <small>${path.lastModified || '未知'}</small>
+            </div>
+            ${path.status ? `<small class="text-${path.status === 'ok' ? 'success' : 'warning'}">${path.status === 'ok' ? '正常监控中' : '注意：路径可能不存在'}</small>` : ''}
+          </div>
+        `;
+      });
+      
+      detailsHtml += `
+        </div>
+        
+        <h6 class="border-bottom pb-2 mt-4">最近活动</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>活动</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      if (group.activities && group.activities.length > 0) {
+        group.activities.forEach(activity => {
+          detailsHtml += `
+            <tr>
+              <td>${activity.time}</td>
+              <td>${activity.description}</td>
+              <td>
+                <span class="badge bg-${activity.status === 'success' ? 'success' : (activity.status === 'warning' ? 'warning' : 'danger')}">
+                  ${activity.status === 'success' ? '成功' : (activity.status === 'warning' ? '警告' : '失败')}
+                </span>
+              </td>
+            </tr>
+          `;
+        });
+      } else {
+        detailsHtml += `
+          <tr>
+            <td colspan="3" class="text-center py-3">暂无活动记录</td>
+          </tr>
+        `;
+      }
+      
+      detailsHtml += `
+            </tbody>
+          </table>
+        </div>
+      `;
+      
+      modalBody.innerHTML = detailsHtml;
+      
+      // 设置编辑按钮的事件
+      document.getElementById('editGroupBtn').onclick = function() {
+        modal.hide();
+        editGroup(groupId);
+      };
+      
+      modal.show();
+    } else {
+      alert('获取文件组详情失败: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('获取文件组详情出错:', error);
+    alert('服务器错误，无法获取文件组详情');
+  });
+}
+
+// 切换文件组监控状态
+function toggleGroupMonitoring(groupId) {
+  fetch(`/api/file-groups/${groupId}/toggle`, {
+    method: 'POST'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.reload(); // 刷新页面
+    } else {
+      alert('切换监控状态失败: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('切换监控状态出错:', error);
+    alert('服务器错误，无法切换监控状态');
+  });
+}
+
+// 删除文件组
+function deleteGroup(groupId) {
+  if (confirm('确定要删除该文件组吗？这将停止所有相关的监控任务。')) {
+    fetch(`/api/file-groups/${groupId}`, {
+      method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('文件组已删除');
+        window.location.reload(); // 刷新页面
+      } else {
+        alert('删除文件组失败: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('删除文件组出错:', error);
+      alert('服务器错误，无法删除文件组');
+    });
+  }
+}
+</script>
+
+<%- include('footer') %> 

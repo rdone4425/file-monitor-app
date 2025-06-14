@@ -7,12 +7,14 @@
         <ol class="breadcrumb bg-light py-2 px-3 rounded">
           <li class="breadcrumb-item"><a href="/files"><i class="bi bi-hdd"></i> 此电脑</a></li>
           <% if (currentPath) { 
-            let parts = currentPath.split('\\');
+            // 根据系统平台选择路径分隔符
+            const pathSeparator = systemInfo.platform === 'win32' ? '\\' : '/';
+            let parts = currentPath.split(pathSeparator);
             let currentBuildPath = '';
             parts.forEach((part, index) => {
               if (part) {
                 currentBuildPath += part;
-                if (index < parts.length - 1) currentBuildPath += '\\';
+                if (index < parts.length - 1) currentBuildPath += pathSeparator;
                 %>
                 <li class="breadcrumb-item <%= (index === parts.length - 1) ? 'active' : '' %>">
                   <% if (index === parts.length - 1) { %>
@@ -57,27 +59,52 @@
           <i class="bi bi-folder"></i> 快速访问
         </div>
         <div class="list-group list-group-flush">
+          <% 
+          // 根据系统平台选择路径分隔符
+          const pathSeparator = systemInfo.platform === 'win32' ? '\\' : '/';
+          %>
           <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir) %>" class="list-group-item list-group-item-action">
             <i class="bi bi-person text-primary"></i> 用户文件夹
           </a>
-          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Desktop') %>" class="list-group-item list-group-item-action">
-            <i class="bi bi-display text-success"></i> 桌面
-          </a>
-          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Documents') %>" class="list-group-item list-group-item-action">
-            <i class="bi bi-file-earmark-text text-warning"></i> 文档
-          </a>
-          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Downloads') %>" class="list-group-item list-group-item-action">
-            <i class="bi bi-download text-danger"></i> 下载
-          </a>
-          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Pictures') %>" class="list-group-item list-group-item-action">
-            <i class="bi bi-images text-info"></i> 图片
-          </a>
-          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Music') %>" class="list-group-item list-group-item-action">
-            <i class="bi bi-music-note-beamed text-primary"></i> 音乐
-          </a>
-          <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Videos') %>" class="list-group-item list-group-item-action">
-            <i class="bi bi-film text-danger"></i> 视频
-          </a>
+          <% if (systemInfo.platform === 'win32') { %>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Desktop') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-display text-success"></i> 桌面
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Documents') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-file-earmark-text text-warning"></i> 文档
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Downloads') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-download text-danger"></i> 下载
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Pictures') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-images text-info"></i> 图片
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Music') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-music-note-beamed text-primary"></i> 音乐
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '\\Videos') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-film text-danger"></i> 视频
+            </a>
+          <% } else { %>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '/Desktop') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-display text-success"></i> 桌面
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '/Documents') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-file-earmark-text text-warning"></i> 文档
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '/Downloads') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-download text-danger"></i> 下载
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '/Pictures') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-images text-info"></i> 图片
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '/Music') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-music-note-beamed text-primary"></i> 音乐
+            </a>
+            <a href="/files?path=<%= encodeURIComponent(systemInfo.homedir + '/Videos') %>" class="list-group-item list-group-item-action">
+              <i class="bi bi-film text-danger"></i> 视频
+            </a>
+          <% } %>
         </div>
         
         <div class="card-header bg-primary text-white mt-2">
@@ -96,6 +123,32 @@
                 <% }
               } catch (e) {} 
             } %>
+          <% } else { %>
+            <!-- Linux 常用目录 -->
+            <a href="/files?path=/" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 根目录 (/)
+            </a>
+            <a href="/files?path=/home" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 用户目录 (/home)
+            </a>
+            <a href="/files?path=/var" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 可变数据 (/var)
+            </a>
+            <a href="/files?path=/etc" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 系统配置 (/etc)
+            </a>
+            <a href="/files?path=/usr" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 用户程序 (/usr)
+            </a>
+            <a href="/files?path=/opt" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 可选软件 (/opt)
+            </a>
+            <a href="/files?path=/bin" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 基本命令 (/bin)
+            </a>
+            <a href="/files?path=/app" class="list-group-item list-group-item-action">
+              <i class="bi bi-hdd-fill text-secondary"></i> 应用目录 (/app)
+            </a>
           <% } %>
         </div>
       </div>
@@ -107,7 +160,11 @@
         <div class="card-header d-flex justify-content-between align-items-center">
           <div>
             <span id="currentPath" class="d-none"><%= currentPath %></span>
-            <strong><i class="bi bi-folder-fill text-warning"></i> <%= currentPath ? currentPath.split('\\').pop() || currentPath : '此电脑' %></strong>
+            <% 
+            // 根据系统平台选择路径分隔符
+            const pathSeparator = systemInfo.platform === 'win32' ? '\\' : '/';
+            %>
+            <strong><i class="bi bi-folder-fill text-warning"></i> <%= currentPath ? currentPath.split(pathSeparator).pop() || currentPath : '此电脑' %></strong>
           </div>
           <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-secondary" id="viewMode" title="切换视图">
@@ -115,6 +172,9 @@
             </button>
             <button class="btn btn-outline-secondary" title="刷新" onclick="location.reload()">
               <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn btn-outline-<%= showHidden ? 'primary' : 'secondary' %>" id="toggleHidden" title="<%= showHidden ? '隐藏' : '显示' %>隐藏文件">
+              <i class="bi bi-eye<%= showHidden ? '' : '-slash' %>"></i>
             </button>
           </div>
         </div>
@@ -254,7 +314,9 @@
       item.addEventListener('click', function() {
         const path = this.getAttribute('data-path');
         if (this.classList.contains('file-directory')) {
-          window.location.href = `/files?path=${encodeURIComponent(path)}`;
+          // 保持显示隐藏文件的设置
+          const showHidden = <%= showHidden ? 'true' : 'false' %>;
+          window.location.href = `/files?path=${encodeURIComponent(path)}${showHidden ? '&showHidden=true' : ''}`;
         } else {
           // 如果是从配置页面打开的，则返回并填充路径
           if (window.opener && window.opener.document.getElementById('watchPath')) {
@@ -355,6 +417,16 @@
           this.innerHTML = '<i class="bi bi-grid"></i>';
           localStorage.setItem('fileViewMode', 'list');
         }
+      });
+    }
+    
+    // 切换显示隐藏文件
+    const toggleHiddenBtn = document.getElementById('toggleHidden');
+    if (toggleHiddenBtn) {
+      toggleHiddenBtn.addEventListener('click', function() {
+        const currentPath = document.getElementById('currentPath').textContent;
+        const showHidden = <%= showHidden ? 'true' : 'false' %>;
+        window.location.href = `/files?path=${encodeURIComponent(currentPath)}&showHidden=${!showHidden}`;
       });
     }
   });

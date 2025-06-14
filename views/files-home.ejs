@@ -79,6 +79,55 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- Linux 常用系统目录 -->
+              <div class="col">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="bi bi-folder-fill text-warning"></i> 
+                      用户目录 (/home)
+                    </h5>
+                    <a href="/files?path=<%= encodeURIComponent('/home') %>" class="btn btn-warning w-100 mt-3">浏览</a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="bi bi-folder-fill text-danger"></i> 
+                      应用目录 (/app)
+                    </h5>
+                    <a href="/files?path=<%= encodeURIComponent('/app') %>" class="btn btn-danger w-100 mt-3">浏览</a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="bi bi-folder-fill text-info"></i> 
+                      系统配置 (/etc)
+                    </h5>
+                    <a href="/files?path=<%= encodeURIComponent('/etc') %>" class="btn btn-info w-100 mt-3 text-white">浏览</a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <i class="bi bi-folder-fill text-secondary"></i> 
+                      可变数据 (/var)
+                    </h5>
+                    <a href="/files?path=<%= encodeURIComponent('/var') %>" class="btn btn-secondary w-100 mt-3">浏览</a>
+                  </div>
+                </div>
+              </div>
             <% } %>
             
             <!-- 常用目录 -->
