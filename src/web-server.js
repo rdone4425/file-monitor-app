@@ -548,18 +548,35 @@ function formatFileSize(bytes) {
  * @returns {object} - 系统信息对象
  */
 function getSystemInfo() {
-  return {
-    platform: os.platform(), // 'win32', 'darwin', 'linux'等
-    type: os.type(),         // 'Windows_NT', 'Darwin', 'Linux'等
-    release: os.release(),   // 版本号
-    arch: os.arch(),         // 架构
-    hostname: os.hostname(), // 主机名
-    homedir: os.homedir(),   // 用户主目录
-    tmpdir: os.tmpdir(),     // 临时目录
-    cpus: os.cpus().length,  // CPU核心数
-    totalMemory: formatFileSize(os.totalmem()), // 总内存
-    freeMemory: formatFileSize(os.freemem())    // 可用内存
-  };
+  try {
+    return {
+      platform: os.platform(), // 'win32', 'darwin', 'linux'等
+      type: os.type(),         // 'Windows_NT', 'Darwin', 'Linux'等
+      release: os.release(),   // 版本号
+      arch: os.arch(),         // 架构
+      hostname: os.hostname(), // 主机名
+      homedir: os.homedir(),   // 用户主目录
+      tmpdir: os.tmpdir(),     // 临时目录
+      cpus: os.cpus().length,  // CPU核心数
+      totalMemory: formatFileSize(os.totalmem()), // 总内存
+      freeMemory: formatFileSize(os.freemem())    // 可用内存
+    };
+  } catch (error) {
+    logger.error(`获取系统信息失败: ${error.message}`);
+    // 返回一个安全的默认值
+    return {
+      platform: 'unknown',
+      type: 'unknown',
+      release: 'unknown',
+      arch: 'unknown',
+      hostname: 'unknown',
+      homedir: '/',
+      tmpdir: '/tmp',
+      cpus: 1,
+      totalMemory: 'unknown',
+      freeMemory: 'unknown'
+    };
+  }
 }
 
 /**
@@ -568,75 +585,97 @@ function getSystemInfo() {
  * @returns {string[]} - 系统根目录数组
  */
 function getSystemRoots(platform) {
-  if (platform === 'win32') {
-    // Windows系统，获取所有驱动器
-    try {
-      // 常见的 Windows 驱动器盘符
-      const possibleDrives = ['A:', 'B:', 'C:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 'M:', 
-                             'N:', 'O:', 'P:', 'Q:', 'R:', 'S:', 'T:', 'U:', 'V:', 'W:', 'X:', 'Y:', 'Z:'];
+  try {
+    if (platform === 'win32') {
+      // Windows系统，获取所有驱动器
+      try {
+        // 常见的 Windows 驱动器盘符
+        const possibleDrives = ['A:', 'B:', 'C:', 'D:', 'E:', 'F:', 'G:', 'H:', 'I:', 'J:', 'K:', 'L:', 'M:', 
+                               'N:', 'O:', 'P:', 'Q:', 'R:', 'S:', 'T:', 'U:', 'V:', 'W:', 'X:', 'Y:', 'Z:'];
+        
+        // 检查哪些驱动器实际存在
+        const drives = [];
+        for (const drive of possibleDrives) {
+          try {
+            // 尝试检查驱动器是否存在
+            if (existsSync(drive + path.sep)) {
+              drives.push(drive);
+            }
+          } catch (err) {
+            // 忽略错误，继续检查其他驱动器
+            logger.debug(`检查驱动器 ${drive} 时出错: ${err.message}`);
+          }
+        }
+        
+        // 如果没有找到任何驱动器，至少返回 C:
+        return drives.length > 0 ? drives : ['C:'];
+      } catch (error) {
+        logger.error(`获取Windows驱动器列表失败: ${error.message}`);
+        return ['C:'];
+      }
+    } else {
+      // Linux/Mac系统
+      // 检查常见的 Linux 目录
+      const commonDirs = [
+        '/',
+        '/home',
+        '/root',
+        '/var',
+        '/etc',
+        '/usr',
+        '/opt',
+        '/app'
+      ];
       
-      // 检查哪些驱动器实际存在
-      const drives = [];
-      for (const drive of possibleDrives) {
+      // 安全地检查目录是否存在和可访问
+      const availableDirs = [];
+      for (const dir of commonDirs) {
         try {
-          // 尝试检查驱动器是否存在
-          if (existsSync(drive + path.sep)) {
-            drives.push(drive);
+          // 检查目录是否存在
+          if (existsSync(dir)) {
+            // 尝试检查目录是否可读
+            try {
+              const testRead = fs_sync.readdirSync(dir, { withFileTypes: true });
+              // 如果能够读取目录内容，则添加到可用目录列表
+              availableDirs.push(dir);
+            } catch (readErr) {
+              // 目录存在但无法读取（可能是权限问题）
+              // 仍然添加到列表中，但会在UI中标记为可能需要权限
+              logger.warn(`目录 ${dir} 存在但无法读取: ${readErr.message}`);
+              availableDirs.push({
+                path: dir,
+                restricted: true,
+                error: readErr.code
+              });
+            }
           }
         } catch (err) {
-          // 忽略错误，继续检查其他驱动器
+          logger.warn(`检查目录 ${dir} 时出错: ${err.message}`);
+          // 即使出错，也添加到列表中，但标记为受限
+          availableDirs.push({
+            path: dir,
+            restricted: true,
+            error: err.code || 'UNKNOWN'
+          });
         }
       }
       
-      // 如果没有找到任何驱动器，至少返回 C:
-      return drives.length > 0 ? drives : ['C:'];
-    } catch (error) {
-      logger.error(`获取Windows驱动器列表失败: ${error.message}`);
-      return ['C:'];
-    }
-  } else {
-    // Linux/Mac系统
-    // 检查常见的 Linux 目录
-    const commonDirs = [
-      '/',
-      '/home',
-      '/root',
-      '/var',
-      '/etc',
-      '/usr',
-      '/opt',
-      '/app'
-    ];
-    
-    // 安全地检查目录是否存在和可访问
-    const availableDirs = [];
-    for (const dir of commonDirs) {
-      try {
-        // 检查目录是否存在
-        if (existsSync(dir)) {
-          // 尝试检查目录是否可读
-          try {
-            const testRead = fs_sync.readdirSync(dir, { withFileTypes: true });
-            // 如果能够读取目录内容，则添加到可用目录列表
-            availableDirs.push(dir);
-          } catch (readErr) {
-            // 目录存在但无法读取（可能是权限问题）
-            // 仍然添加到列表中，但会在UI中标记为可能需要权限
-            logger.warn(`目录 ${dir} 存在但无法读取: ${readErr.message}`);
-            availableDirs.push({
-              path: dir,
-              restricted: true,
-              error: readErr.code
-            });
-          }
-        }
-      } catch (err) {
-        logger.warn(`检查目录 ${dir} 时出错: ${err.message}`);
+      // 如果没有找到任何可用目录，至少返回根目录
+      if (availableDirs.length === 0) {
+        logger.warn('未找到任何可用目录，返回根目录');
+        return [{
+          path: '/',
+          restricted: true,
+          error: 'NO_DIRS_FOUND'
+        }];
       }
+      
+      return availableDirs;
     }
-    
-    // 如果没有找到任何可用目录，至少返回根目录
-    return availableDirs.length > 0 ? availableDirs : ['/'];
+  } catch (error) {
+    logger.error(`获取系统根目录失败: ${error.message}`);
+    // 返回一个安全的默认值
+    return platform === 'win32' ? ['C:'] : ['/'];
   }
 }
 
@@ -1425,9 +1464,26 @@ PORT=3000`;
       }
       
       const currentPath = req.query.path;
+      logger.info(`请求浏览文件路径: ${currentPath}`);
       
       // 检查路径是否存在
-      if (!fs_sync.existsSync(currentPath)) {
+      let pathExists = false;
+      try {
+        pathExists = fs_sync.existsSync(currentPath);
+      } catch (existsError) {
+        logger.error(`检查路径是否存在时出错: ${existsError.message}`);
+        return res.status(500).render('error', {
+          title: '路径检查错误',
+          message: `检查路径是否存在时出错: ${existsError.message}`,
+          error: {
+            status: 500,
+            stack: process.env.NODE_ENV === 'development' ? existsError.stack : ''
+          },
+          systemInfo
+        });
+      }
+      
+      if (!pathExists) {
         logger.warn(`请求访问不存在的路径: ${currentPath}`);
         return res.status(404).render('error', {
           title: '路径不存在',
@@ -1448,29 +1504,45 @@ PORT=3000`;
         if (parentPath === currentPath) {
           parentPath = null;
         }
-      } catch (error) {
-        logger.error(`获取父目录错误: ${error.message}`);
+      } catch (pathError) {
+        logger.error(`获取父目录错误: ${pathError.message}`);
         parentPath = null;
+      }
+      
+      // 检查是否是目录
+      let isDirectory = false;
+      try {
+        const stats = fs_sync.statSync(currentPath);
+        isDirectory = stats.isDirectory();
+      } catch (statError) {
+        logger.error(`获取路径状态信息出错: ${statError.message}`);
+        return res.status(500).render('error', {
+          title: '路径状态错误',
+          message: `获取路径状态信息出错: ${statError.message}`,
+          error: {
+            status: 500,
+            stack: process.env.NODE_ENV === 'development' ? statError.stack : ''
+          },
+          systemInfo
+        });
+      }
+      
+      if (!isDirectory) {
+        logger.warn(`请求的路径不是目录: ${currentPath}`);
+        return res.status(400).render('error', {
+          title: '不是目录',
+          message: `路径 ${currentPath} 不是一个目录。`,
+          error: {
+            status: 400,
+            stack: ''
+          },
+          systemInfo
+        });
       }
       
       // 获取目录内容
       let items = [];
       try {
-        // 检查是否是目录
-        const stats = fs_sync.statSync(currentPath);
-        if (!stats.isDirectory()) {
-          logger.warn(`请求的路径不是目录: ${currentPath}`);
-          return res.status(400).render('error', {
-            title: '不是目录',
-            message: `路径 ${currentPath} 不是一个目录。`,
-            error: {
-              status: 400,
-              stack: ''
-            },
-            systemInfo
-          });
-        }
-        
         // 修复：确保路径使用正确的分隔符
         const normalizedPath = currentPath.replace(/\\/g, path.sep);
         items = await fs.readdir(normalizedPath, { withFileTypes: true });
@@ -1519,9 +1591,9 @@ PORT=3000`;
       ];
       
       for (const item of items) {
-        const itemPath = path.join(currentPath, item.name);
-        
         try {
+          const itemPath = path.join(currentPath, item.name);
+          
           // 跳过已知的系统保留文件
           if (systemReservedFiles.includes(item.name)) {
             files.push({
@@ -1535,7 +1607,15 @@ PORT=3000`;
           }
           
           // 检查文件是否存在和可访问
-          if (!fs_sync.existsSync(itemPath)) {
+          let itemExists = false;
+          try {
+            itemExists = fs_sync.existsSync(itemPath);
+          } catch (itemExistsError) {
+            logger.warn(`检查项目是否存在时出错: ${itemPath}, ${itemExistsError.message}`);
+            continue;
+          }
+          
+          if (!itemExists) {
             logger.warn(`跳过不存在的项目: ${itemPath}`);
             continue;
           }
@@ -1570,7 +1650,7 @@ PORT=3000`;
           }
         } catch (itemError) {
           // 跳过无法处理的项目
-          logger.warn(`跳过项目 ${itemPath}: ${itemError.message}`);
+          logger.warn(`跳过项目处理错误: ${item ? item.name : 'unknown'}, ${itemError.message}`);
         }
       }
       
@@ -1586,6 +1666,17 @@ PORT=3000`;
       });
     } catch (error) {
       logger.error(`文件浏览器错误: ${error.message}`);
+      logger.error(`错误堆栈: ${error.stack}`);
+      
+      // 尝试获取系统信息，如果失败则提供空对象
+      let systemInfo;
+      try {
+        systemInfo = getSystemInfo();
+      } catch (infoError) {
+        logger.error(`获取系统信息失败: ${infoError.message}`);
+        systemInfo = {};
+      }
+      
       res.status(500).render('error', {
         title: '服务器错误',
         message: `浏览文件时发生错误: ${error.message}`,
@@ -1593,7 +1684,7 @@ PORT=3000`;
           status: 500,
           stack: process.env.NODE_ENV === 'development' ? error.stack : ''
         },
-        systemInfo: getSystemInfo()
+        systemInfo
       });
     }
   });
@@ -1623,24 +1714,39 @@ PORT=3000`;
       
       // 读取已保存的仓库信息
       let savedRepos = [];
-      if (existsSync(reposInfoPath)) {
-        try {
-          const reposInfoData = await fs.readFile(reposInfoPath, 'utf8');
-          savedRepos = JSON.parse(reposInfoData);
-          logger.info(`已从文件加载 ${savedRepos.length} 个保存的仓库信息`);
-          
-          // 如果有搜索关键词，过滤已保存的仓库
-          if (search) {
-            const searchLower = search.toLowerCase();
-            savedRepos = savedRepos.filter(repo => 
-              repo.name.toLowerCase().includes(searchLower) || 
-              (repo.description && repo.description.toLowerCase().includes(searchLower))
-            );
-            logger.info(`搜索过滤后，已保存的仓库数量: ${savedRepos.length}`);
+      try {
+        if (existsSync(reposInfoPath)) {
+          try {
+            const reposInfoData = await fs.readFile(reposInfoPath, 'utf8');
+            savedRepos = JSON.parse(reposInfoData);
+            logger.info(`已从文件加载 ${savedRepos.length} 个保存的仓库信息`);
+            
+            // 如果有搜索关键词，过滤已保存的仓库
+            if (search) {
+              const searchLower = search.toLowerCase();
+              savedRepos = savedRepos.filter(repo => 
+                repo.name.toLowerCase().includes(searchLower) || 
+                (repo.description && repo.description.toLowerCase().includes(searchLower))
+              );
+              logger.info(`搜索过滤后，已保存的仓库数量: ${savedRepos.length}`);
+            }
+          } catch (readError) {
+            logger.error(`读取仓库信息文件错误: ${readError.message}`);
+            // 不要抛出异常，继续处理
           }
-        } catch (readError) {
-          logger.error(`读取仓库信息文件错误: ${readError.message}`);
+        } else {
+          logger.info(`仓库信息文件不存在，将创建新文件: ${reposInfoPath}`);
+          try {
+            // 创建空的仓库信息文件
+            await fs.writeFile(reposInfoPath, '[]');
+          } catch (createError) {
+            logger.error(`创建仓库信息文件失败: ${createError.message}`);
+            // 不要抛出异常，继续处理
+          }
         }
+      } catch (fileError) {
+        logger.error(`处理仓库信息文件时出错: ${fileError.message}`);
+        // 不要抛出异常，继续处理
       }
       
       // 从GitHub获取仓库列表
@@ -1654,58 +1760,78 @@ PORT=3000`;
           // 创建GitHub API服务实例（不需要指定仓库和分支）
           const githubService = new GitHubApiService(githubToken, githubUsername, '');
           
-          // 验证token有效性
-          const isTokenValid = await githubService.validateToken();
-          if (!isTokenValid) {
-            throw new Error('GitHub Token无效或与用户名不匹配');
-          }
-          
-          // 获取仓库列表
-          repos = await githubService.getUserRepos(page, perPage);
-          logger.info(`从GitHub获取了 ${repos.length} 个仓库`);
-          
-          // 如果返回的仓库数量等于每页数量，可能有更多页
-          hasMorePages = repos.length === perPage;
-          
-          // 如果有搜索关键词，过滤仓库
-          if (search) {
-            const searchLower = search.toLowerCase();
-            repos = repos.filter(repo => 
-              repo.name.toLowerCase().includes(searchLower) || 
-              (repo.description && repo.description.toLowerCase().includes(searchLower))
-            );
-            logger.info(`搜索过滤后，从GitHub获取的仓库数量: ${repos.length}`);
-          }
-          
-          // 如果启用了自动保存，将获取的仓库信息保存到本地
-          if (autoSave) {
-            try {
-              // 合并现有保存的仓库和新获取的仓库，避免重复
-              const existingRepoIds = new Set(savedRepos.map(r => r.id));
-              const newRepos = repos.filter(r => !existingRepoIds.has(r.id));
-              
-              if (newRepos.length > 0) {
-                const updatedSavedRepos = [...savedRepos, ...newRepos];
-                await fs.writeFile(reposInfoPath, JSON.stringify(updatedSavedRepos, null, 2));
-                logger.info(`已保存 ${newRepos.length} 个新仓库信息到本地`);
-                
-                // 更新savedRepos以在响应中反映新保存的仓库
-                savedRepos = updatedSavedRepos;
-              }
-            } catch (saveError) {
-              logger.error(`保存仓库信息到本地失败: ${saveError.message}`);
+          try {
+            // 验证token有效性
+            const isTokenValid = await githubService.validateToken();
+            if (!isTokenValid) {
+              throw new Error('GitHub Token无效或与用户名不匹配');
             }
+            
+            // 获取仓库列表
+            repos = await githubService.getUserRepos(page, perPage);
+            logger.info(`从GitHub获取了 ${repos.length} 个仓库`);
+            
+            // 如果返回的仓库数量等于每页数量，可能有更多页
+            hasMorePages = repos.length === perPage;
+            
+            // 如果有搜索关键词，过滤仓库
+            if (search) {
+              const searchLower = search.toLowerCase();
+              repos = repos.filter(repo => 
+                repo.name.toLowerCase().includes(searchLower) || 
+                (repo.description && repo.description.toLowerCase().includes(searchLower))
+              );
+              logger.info(`搜索过滤后，从GitHub获取的仓库数量: ${repos.length}`);
+            }
+            
+            // 如果启用了自动保存，将获取的仓库信息保存到本地
+            if (autoSave) {
+              try {
+                // 合并现有保存的仓库和新获取的仓库，避免重复
+                const existingRepoIds = new Set(savedRepos.map(r => r.id));
+                const newRepos = repos.filter(r => !existingRepoIds.has(r.id));
+                
+                if (newRepos.length > 0) {
+                  const updatedSavedRepos = [...savedRepos, ...newRepos];
+                  await fs.writeFile(reposInfoPath, JSON.stringify(updatedSavedRepos, null, 2));
+                  logger.info(`已保存 ${newRepos.length} 个新仓库信息到本地`);
+                  
+                  // 更新savedRepos以在响应中反映新保存的仓库
+                  savedRepos = updatedSavedRepos;
+                }
+              } catch (saveError) {
+                logger.error(`保存仓库信息到本地失败: ${saveError.message}`);
+                // 不要抛出异常，继续处理
+              }
+            }
+          } catch (apiError) {
+            logger.error(`GitHub API调用失败: ${apiError.message}`);
+            error = `GitHub API调用失败: ${apiError.message}`;
+            // 不要抛出异常，继续处理
           }
         } catch (githubError) {
           logger.error(`获取GitHub仓库列表失败: ${githubError.message}`);
           error = `获取GitHub仓库列表失败: ${githubError.message}`;
+          // 不要抛出异常，继续处理
         }
       } else {
         logger.warn('未设置GitHub凭据，无法获取仓库列表');
         error = '未设置GitHub凭据，无法获取仓库列表。请在设置页面配置GitHub Token和用户名。';
       }
       
-      res.render('repos', { 
+      // 确保在渲染页面前所有数据都是有效的
+      if (!Array.isArray(savedRepos)) {
+        logger.error('savedRepos不是数组，重置为空数组');
+        savedRepos = [];
+      }
+      
+      if (!Array.isArray(repos)) {
+        logger.error('repos不是数组，重置为空数组');
+        repos = [];
+      }
+      
+      // 渲染页面
+      return res.render('repos', { 
         savedRepos,
         repos,
         page,
@@ -1722,21 +1848,34 @@ PORT=3000`;
       });
     } catch (error) {
       logger.error(`仓库页面错误: ${error.message}`);
-      res.render('repos', {
-        savedRepos: [],
-        repos: [], 
-        page: 1,
-        perPage: 100,
-        search: '',
-        autoSave: false,
-        error: `获取仓库列表时发生错误: ${error.message}`,
-        pagination: {
-          page: 1,
-          perPage: 100,
-          totalRepos: 0,
-          hasMorePages: false
-        }
-      });
+      logger.error(`错误堆栈: ${error.stack}`);
+      
+      // 尝试以最简单的方式渲染错误页面
+      try {
+        return res.status(500).render('error', {
+          title: '服务器错误',
+          message: `获取仓库列表时发生错误: ${error.message}`,
+          error: {
+            status: 500,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : ''
+          },
+          systemInfo: getSystemInfo()
+        });
+      } catch (renderError) {
+        // 如果渲染错误页面也失败，返回最简单的错误响应
+        logger.error(`渲染错误页面失败: ${renderError.message}`);
+        return res.status(500).send(`
+          <html>
+            <head><title>内部服务器错误</title></head>
+            <body>
+              <h1>内部服务器错误</h1>
+              <p>获取仓库列表时发生错误: ${error.message}</p>
+              <p>渲染错误页面也失败: ${renderError.message}</p>
+              <p><a href="/">返回首页</a></p>
+            </body>
+          </html>
+        `);
+      }
     }
   });
   
@@ -1872,30 +2011,78 @@ PORT=3000`;
     try {
       const { owner, repo } = req.params;
       
+      logger.info(`获取仓库分支请求: owner=${owner}, repo=${repo}`);
+      
       // 获取GitHub凭据
       const githubToken = process.env.GITHUB_TOKEN;
       const githubUsername = process.env.GITHUB_USERNAME;
       
       if (!githubToken || !githubUsername) {
+        logger.warn('未设置GitHub凭据，无法获取分支信息');
         return res.status(400).json({
           success: false,
           error: '未设置GitHub凭据，无法获取分支信息'
         });
       }
       
-      // 创建GitHub API服务实例
-      const githubService = new GitHubApiService(githubToken, githubUsername, repo);
-      
-      // 获取分支列表
-      const branches = await githubService.getRepoBranches(repo);
-      
-      res.json({
-        success: true,
-        data: branches
-      });
+      try {
+        // 创建GitHub API服务实例
+        const githubService = new GitHubApiService(githubToken, githubUsername, repo);
+        
+        // 验证token有效性
+        const isTokenValid = await githubService.validateToken();
+        if (!isTokenValid) {
+          logger.error('GitHub Token无效或与用户名不匹配');
+          return res.status(401).json({
+            success: false,
+            error: 'GitHub Token无效或与用户名不匹配'
+          });
+        }
+        
+        // 获取分支列表
+        const branches = await githubService.getRepoBranches(repo);
+        logger.info(`成功获取仓库 ${repo} 的分支列表，共 ${branches.length} 个分支`);
+        
+        return res.json({
+          success: true,
+          data: branches
+        });
+      } catch (apiError) {
+        logger.error(`GitHub API调用失败: ${apiError.message}`);
+        
+        // 检查特定的错误类型
+        if (apiError.response) {
+          const status = apiError.response.status;
+          const message = apiError.response.data && apiError.response.data.message 
+            ? apiError.response.data.message 
+            : apiError.message;
+          
+          if (status === 404) {
+            logger.error(`仓库 ${repo} 不存在或无权访问`);
+            return res.status(404).json({
+              success: false,
+              error: `仓库 ${repo} 不存在或无权访问`,
+              details: message
+            });
+          }
+          
+          return res.status(status).json({
+            success: false,
+            error: `GitHub API错误: ${message}`,
+            status
+          });
+        }
+        
+        return res.status(500).json({
+          success: false,
+          error: `获取仓库分支失败: ${apiError.message}`
+        });
+      }
     } catch (error) {
       logger.error(`获取仓库分支失败: ${error.message}`);
-      res.status(500).json({
+      logger.error(`错误堆栈: ${error.stack}`);
+      
+      return res.status(500).json({
         success: false,
         error: `获取仓库分支失败: ${error.message}`
       });

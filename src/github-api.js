@@ -279,9 +279,18 @@ export class GitHubApiService {
    */
   async getRepoBranches(repoName) {
     try {
-      const response = await axios.get(
-        `${this.baseUrl}/repos/${this.username}/${repoName}/branches`,
-        { headers: this.headers }
+      logger.info(`正在获取仓库 ${repoName} 的分支列表...`);
+      
+      const response = await RetryHandler.executeWithRetry(
+        () => axios.get(
+          `${this.baseUrl}/repos/${this.username}/${repoName}/branches`,
+          { headers: this.headers }
+        ),
+        {
+          maxRetries: 2,
+          baseDelay: 1000,
+          retryCondition: RetryHandler.githubRetryCondition
+        }
       );
       
       logger.info(`成功获取仓库 ${repoName} 的分支列表，共 ${response.data.length} 个分支`);
@@ -291,7 +300,10 @@ export class GitHubApiService {
         commit: branch.commit.sha
       }));
     } catch (error) {
-      logger.error(`获取仓库分支列表失败: ${error.message}`);
+      const errorReport = ErrorClassifier.generateReport(error);
+      logger.error(`获取仓库 ${repoName} 分支列表失败:\n${errorReport}`);
+      
+      // 重新抛出错误，保留原始响应信息
       throw error;
     }
   }
