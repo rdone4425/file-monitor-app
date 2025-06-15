@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
+import fs_sync from 'fs';
 import { execSync } from 'child_process';
 import { logger } from './logger.js';
 import { GitHubApiService } from './github-api.js';
@@ -16,7 +17,6 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import os from 'os';
 import { createWatcher } from './watcher.js';
-import fs_sync from 'fs';
 import { initialize } from './initialize.js';
 import multiFileRoutes from './multi-file-routes.js';
 
@@ -63,10 +63,11 @@ async function startMonitoringTask(project) {
       await stopMonitoringTask(project.id);
     }
     
-    // 验证路径存在
-    if (!existsSync(project.path)) {
-      logger.error(`项目 "${project.name}" 的路径不存在: ${project.path}`);
-      return false;
+    // 验证路径
+    const pathExists = existsSync(project.path);
+    if (!pathExists) {
+      logger.warn(`项目 "${project.name}" 的路径不存在: ${project.path}`);
+      logger.info(`将继续尝试监控，但在路径创建前不会检测到任何变化`);
     }
     
     // 获取环境变量
@@ -125,9 +126,17 @@ async function startMonitoringTask(project) {
       }
     }
     
-    // 检查路径是文件还是目录
-    const stats = await fs.stat(project.path);
-    const isFile = stats.isFile();
+    // 检查路径类型
+    let isFile = false;
+    try {
+      if (pathExists) {
+        const stats = await fs.stat(project.path);
+        isFile = stats.isFile();
+      }
+    } catch (error) {
+      logger.error(`无法获取路径信息: ${project.path}, 错误: ${error.message}`);
+      logger.warn('将假设这是一个目录路径');
+    }
     
     logger.info(`启动项目 "${project.name}" 的文件监控`);
     logger.info(`监控路径: ${project.path}`);
@@ -164,7 +173,14 @@ async function startMonitoringTask(project) {
         
         if (changedFiles.length > 0) {
           // 过滤文件
-          const existingFiles = changedFiles.filter(file => fs_sync.existsSync(file));
+          const existingFiles = changedFiles.filter(file => {
+            const exists = fs_sync.existsSync(file);
+            if (!exists) {
+              logger.warn(`跳过不存在的文件: ${file}`);
+            }
+            return exists;
+          });
+          
           const filterResult = await fileFilter.filterFiles(existingFiles);
 
           logger.info(`项目 "${project.name}" 文件过滤结果: ${filterResult.stats.allowed} 允许, ${filterResult.stats.filtered} 过滤`);
@@ -198,55 +214,17 @@ async function startMonitoringTask(project) {
             const failCount = uploadResults.length - successCount;
 
             logger.info(`项目 "${project.name}" 上传完成: ${successCount} 成功, ${failCount} 失败，耗时: ${uploadTime}ms`);
-
-            // 记录性能数据
-            if (successCount > 0) {
-              performanceMonitor.recordUploadSuccess(uploadTime);
-
-              // 发送上传成功通知
-              await notificationSystem.notify('upload_success', {
-                projectName: project.name,
-                repository: `${githubUsername}/${project.repo}`,
-                successCount,
-                failedCount: failCount,
-                uploadTime
-              });
-            }
-            if (failCount > 0) {
-              performanceMonitor.recordUploadFailure();
-
-              // 发送上传失败通知
-              await notificationSystem.notify('upload_failed', {
-                projectName: project.name,
-                repository: `${githubUsername}/${project.repo}`,
-                errorMessage: `${failCount} 个文件上传失败`,
-                retryCount: 0
-              });
-            }
-
+            
             // 记录失败的文件
             if (failCount > 0) {
               uploadResults
                 .filter(r => !r.success)
-                .forEach(r => logger.error(`项目 "${project.name}" 文件 ${r.file.repoPath} 上传失败: ${r.error}`));
+                .forEach(r => {
+                  logger.error(`文件 ${r.file.repoPath} 上传失败: ${r.error}`);
+                });
             }
-          }
-          
-          // 处理已删除的文件
-          const deletedFiles = changedFiles
-            .filter(file => !fs_sync.existsSync(file))
-            .map(file => isFile ? path.basename(file) : getRelativePath(file, project.path));
-          
-          if (deletedFiles.length > 0) {
-            logger.info(`项目 "${project.name}" 处理已删除的文件: ${deletedFiles.length} 个`);
-            
-            for (const filePath of deletedFiles) {
-              try {
-                await githubService.deleteFile(filePath, `删除文件: ${filePath}`);
-              } catch (error) {
-                logger.error(`项目 "${project.name}" 删除远程文件 ${filePath} 失败: ${error.message}`);
-              }
-            }
+          } else {
+            logger.warn(`项目 "${project.name}" 没有有效的文件可上传`);
           }
           
           // 更新项目的最后更新时间
@@ -257,22 +235,12 @@ async function startMonitoringTask(project) {
       }
     });
     
-    // 保存监控任务
+    // 存储监控任务
     activeMonitoringTasks.set(project.id, {
       watcher,
-      project,
-      githubEnabled: githubIntegrationEnabled
+      project
     });
     
-    logger.info(`项目 "${project.name}" 监控已启动，等待文件变化...`);
-
-    // 发送项目启动通知
-    await notificationSystem.notify('project_started', {
-      projectName: project.name,
-      path: project.path,
-      repository: githubIntegrationEnabled ? `${githubUsername}/${project.repo}` : '未配置'
-    });
-
     return true;
   } catch (error) {
     logger.error(`启动项目 "${project.name}" 监控失败: ${error.message}`);
@@ -636,17 +604,38 @@ function getSystemRoots(platform) {
       '/var',
       '/etc',
       '/usr',
-      '/opt'
+      '/opt',
+      '/app'
     ];
     
-    const availableDirs = commonDirs.filter(dir => {
+    // 安全地检查目录是否存在和可访问
+    const availableDirs = [];
+    for (const dir of commonDirs) {
       try {
-        return existsSync(dir);
+        // 检查目录是否存在
+        if (existsSync(dir)) {
+          // 尝试检查目录是否可读
+          try {
+            const testRead = fs_sync.readdirSync(dir, { withFileTypes: true });
+            // 如果能够读取目录内容，则添加到可用目录列表
+            availableDirs.push(dir);
+          } catch (readErr) {
+            // 目录存在但无法读取（可能是权限问题）
+            // 仍然添加到列表中，但会在UI中标记为可能需要权限
+            logger.warn(`目录 ${dir} 存在但无法读取: ${readErr.message}`);
+            availableDirs.push({
+              path: dir,
+              restricted: true,
+              error: readErr.code
+            });
+          }
+        }
       } catch (err) {
-        return false;
+        logger.warn(`检查目录 ${dir} 时出错: ${err.message}`);
       }
-    });
+    }
     
+    // 如果没有找到任何可用目录，至少返回根目录
     return availableDirs.length > 0 ? availableDirs : ['/'];
   }
 }
@@ -1437,6 +1426,20 @@ PORT=3000`;
       
       const currentPath = req.query.path;
       
+      // 检查路径是否存在
+      if (!fs_sync.existsSync(currentPath)) {
+        logger.warn(`请求访问不存在的路径: ${currentPath}`);
+        return res.status(404).render('error', {
+          title: '路径不存在',
+          message: `路径 ${currentPath} 不存在。`,
+          error: {
+            status: 404,
+            stack: ''
+          },
+          systemInfo
+        });
+      }
+      
       // 获取父目录
       let parentPath;
       try {
@@ -1453,27 +1456,48 @@ PORT=3000`;
       // 获取目录内容
       let items = [];
       try {
+        // 检查是否是目录
+        const stats = fs_sync.statSync(currentPath);
+        if (!stats.isDirectory()) {
+          logger.warn(`请求的路径不是目录: ${currentPath}`);
+          return res.status(400).render('error', {
+            title: '不是目录',
+            message: `路径 ${currentPath} 不是一个目录。`,
+            error: {
+              status: 400,
+              stack: ''
+            },
+            systemInfo
+          });
+        }
+        
         // 修复：确保路径使用正确的分隔符
         const normalizedPath = currentPath.replace(/\\/g, path.sep);
         items = await fs.readdir(normalizedPath, { withFileTypes: true });
       } catch (error) {
-        logger.error(`读取目录内容错误: ${error.message}`);
+        logger.error(`读取目录内容错误 (${currentPath}): ${error.message}`);
         
         // 提供更友好的错误信息
         let errorMessage = `无法读取目录内容: ${error.message}`;
+        let errorStatus = 500;
         
         // 检查是否是权限问题
         if (error.code === 'EACCES') {
           errorMessage = `权限不足，无法访问目录 ${currentPath}。在 Linux 系统中，某些系统目录需要 root 权限才能访问。`;
+          errorStatus = 403;
         } else if (error.code === 'ENOENT') {
           errorMessage = `目录 ${currentPath} 不存在。`;
+          errorStatus = 404;
+        } else if (error.code === 'ENOTDIR') {
+          errorMessage = `路径 ${currentPath} 不是一个目录。`;
+          errorStatus = 400;
         }
         
-        return res.status(error.code === 'EACCES' ? 403 : 500).render('error', {
+        return res.status(errorStatus).render('error', {
           title: '目录访问错误',
           message: errorMessage,
           error: {
-            status: error.code === 'EACCES' ? 403 : 500,
+            status: errorStatus,
             stack: process.env.NODE_ENV === 'development' ? error.stack : ''
           },
           systemInfo
@@ -1507,6 +1531,12 @@ PORT=3000`;
               isDirectory: false,
               restricted: true
             });
+            continue;
+          }
+          
+          // 检查文件是否存在和可访问
+          if (!fs_sync.existsSync(itemPath)) {
+            logger.warn(`跳过不存在的项目: ${itemPath}`);
             continue;
           }
           
@@ -1556,7 +1586,15 @@ PORT=3000`;
       });
     } catch (error) {
       logger.error(`文件浏览器错误: ${error.message}`);
-      res.status(500).send(`浏览文件时发生错误: ${error.message}`);
+      res.status(500).render('error', {
+        title: '服务器错误',
+        message: `浏览文件时发生错误: ${error.message}`,
+        error: {
+          status: 500,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : ''
+        },
+        systemInfo: getSystemInfo()
+      });
     }
   });
   
@@ -1605,28 +1643,81 @@ PORT=3000`;
         }
       }
       
-      // 即使没有设置环境变量，也尝试获取仓库列表
-      try {
-        // 这里应该添加获取仓库列表的逻辑
-        // 暂时只记录日志
-        logger.info('即使没有设置环境变量，也尝试获取仓库列表');
-    } catch (error) {
-      logger.error(`获取仓库列表错误: ${error.message}`);
+      // 从GitHub获取仓库列表
+      let repos = [];
+      let hasMorePages = false;
+      let error = null;
+      
+      // 只有在设置了GitHub凭据时才尝试获取仓库列表
+      if (githubToken && githubUsername) {
+        try {
+          // 创建GitHub API服务实例（不需要指定仓库和分支）
+          const githubService = new GitHubApiService(githubToken, githubUsername, '');
+          
+          // 验证token有效性
+          const isTokenValid = await githubService.validateToken();
+          if (!isTokenValid) {
+            throw new Error('GitHub Token无效或与用户名不匹配');
+          }
+          
+          // 获取仓库列表
+          repos = await githubService.getUserRepos(page, perPage);
+          logger.info(`从GitHub获取了 ${repos.length} 个仓库`);
+          
+          // 如果返回的仓库数量等于每页数量，可能有更多页
+          hasMorePages = repos.length === perPage;
+          
+          // 如果有搜索关键词，过滤仓库
+          if (search) {
+            const searchLower = search.toLowerCase();
+            repos = repos.filter(repo => 
+              repo.name.toLowerCase().includes(searchLower) || 
+              (repo.description && repo.description.toLowerCase().includes(searchLower))
+            );
+            logger.info(`搜索过滤后，从GitHub获取的仓库数量: ${repos.length}`);
+          }
+          
+          // 如果启用了自动保存，将获取的仓库信息保存到本地
+          if (autoSave) {
+            try {
+              // 合并现有保存的仓库和新获取的仓库，避免重复
+              const existingRepoIds = new Set(savedRepos.map(r => r.id));
+              const newRepos = repos.filter(r => !existingRepoIds.has(r.id));
+              
+              if (newRepos.length > 0) {
+                const updatedSavedRepos = [...savedRepos, ...newRepos];
+                await fs.writeFile(reposInfoPath, JSON.stringify(updatedSavedRepos, null, 2));
+                logger.info(`已保存 ${newRepos.length} 个新仓库信息到本地`);
+                
+                // 更新savedRepos以在响应中反映新保存的仓库
+                savedRepos = updatedSavedRepos;
+              }
+            } catch (saveError) {
+              logger.error(`保存仓库信息到本地失败: ${saveError.message}`);
+            }
+          }
+        } catch (githubError) {
+          logger.error(`获取GitHub仓库列表失败: ${githubError.message}`);
+          error = `获取GitHub仓库列表失败: ${githubError.message}`;
+        }
+      } else {
+        logger.warn('未设置GitHub凭据，无法获取仓库列表');
+        error = '未设置GitHub凭据，无法获取仓库列表。请在设置页面配置GitHub Token和用户名。';
       }
       
       res.render('repos', { 
         savedRepos,
-        repos: [], // 确保始终有一个空数组
+        repos,
         page,
         perPage,
         search,
         autoSave,
-        error: null, // 添加 error 变量，设为 null
+        error,
         pagination: {
           page,
           perPage,
           totalRepos: savedRepos.length,
-          hasMorePages: false
+          hasMorePages
         }
       });
     } catch (error) {
@@ -1774,6 +1865,41 @@ PORT=3000`;
 
     // 启动所有活跃项目的监控
     startAllActiveProjects();
+  });
+  
+  // 获取仓库分支API
+  app.get('/api/repos/:owner/:repo/branches', async (req, res) => {
+    try {
+      const { owner, repo } = req.params;
+      
+      // 获取GitHub凭据
+      const githubToken = process.env.GITHUB_TOKEN;
+      const githubUsername = process.env.GITHUB_USERNAME;
+      
+      if (!githubToken || !githubUsername) {
+        return res.status(400).json({
+          success: false,
+          error: '未设置GitHub凭据，无法获取分支信息'
+        });
+      }
+      
+      // 创建GitHub API服务实例
+      const githubService = new GitHubApiService(githubToken, githubUsername, repo);
+      
+      // 获取分支列表
+      const branches = await githubService.getRepoBranches(repo);
+      
+      res.json({
+        success: true,
+        data: branches
+      });
+    } catch (error) {
+      logger.error(`获取仓库分支失败: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        error: `获取仓库分支失败: ${error.message}`
+      });
+    }
   });
   
   // GitHub连接测试API

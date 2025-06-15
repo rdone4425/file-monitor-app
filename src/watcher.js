@@ -16,9 +16,21 @@ export function createWatcher(watchPath, ignoredPatterns, debounceTime, onChange
   let changedFiles = [];
   let debounceTimer = null;
   
-  // 检查路径是文件还是目录
-  const stats = fs.statSync(watchPath);
-  const isFile = stats.isFile();
+  // 检查路径是否存在
+  if (!fs.existsSync(watchPath)) {
+    logger.error(`监控路径不存在: ${watchPath}`);
+    logger.warn(`将继续尝试监控该路径，但可能不会检测到任何变化，直到路径被创建`);
+  }
+  
+  // 尝试检查路径类型，如果路径存在
+  let isFile = false;
+  try {
+    const stats = fs.existsSync(watchPath) ? fs.statSync(watchPath) : null;
+    isFile = stats ? stats.isFile() : false;
+  } catch (error) {
+    logger.error(`无法获取路径信息: ${watchPath}, 错误: ${error.message}`);
+    logger.warn('将假设这是一个目录路径');
+  }
   
   // 如果是文件，则监控该文件的目录，但只关注该文件
   const watchTarget = isFile ? path.dirname(watchPath) : watchPath;
@@ -83,7 +95,7 @@ export function createWatcher(watchPath, ignoredPatterns, debounceTime, onChange
     if (isFile) {
       logger.info(`开始监控文件: ${watchPath}`);
     } else {
-      logger.info('初始扫描完成，开始监控文件变化');
+      logger.info(`初始扫描完成，开始监控目录: ${watchPath}`);
     }
   });
   

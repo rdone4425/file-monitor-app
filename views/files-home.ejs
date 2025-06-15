@@ -68,66 +68,82 @@
               <% }) %>
             <% } else { %>
               <!-- Linux/Mac 根目录 -->
-              <div class="col">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">
-                      <i class="bi bi-hdd-fill text-primary"></i> 
-                      根目录 (/)
-                    </h5>
-                    <a href="/files?path=<%= encodeURIComponent('/') %>" class="btn btn-primary w-100 mt-3">浏览</a>
+              <% 
+              // 处理Linux目录，支持对象格式
+              roots.forEach(root => {
+                let rootPath, isRestricted = false, errorCode = '';
+                
+                if (typeof root === 'string') {
+                  rootPath = root;
+                } else if (typeof root === 'object') {
+                  rootPath = root.path;
+                  isRestricted = root.restricted === true;
+                  errorCode = root.error || '';
+                }
+                
+                let btnClass = 'btn-primary';
+                let iconClass = 'bi-folder-fill';
+                let titleText = '';
+                
+                // 根据路径设置不同的样式
+                if (rootPath === '/') {
+                  btnClass = 'btn-primary';
+                  iconClass = 'bi-hdd-fill';
+                  titleText = '根目录';
+                } else if (rootPath === '/home') {
+                  btnClass = 'btn-warning';
+                  titleText = '用户目录';
+                } else if (rootPath === '/app') {
+                  btnClass = 'btn-danger';
+                  titleText = '应用目录';
+                } else if (rootPath === '/etc') {
+                  btnClass = 'btn-info';
+                  titleText = '系统配置';
+                } else if (rootPath === '/var') {
+                  btnClass = 'btn-secondary';
+                  titleText = '可变数据';
+                } else if (rootPath === '/root') {
+                  btnClass = 'btn-dark';
+                  titleText = 'Root用户目录';
+                } else if (rootPath === '/usr') {
+                  btnClass = 'btn-success';
+                  titleText = '用户程序';
+                } else if (rootPath === '/opt') {
+                  btnClass = 'btn-info';
+                  titleText = '可选软件';
+                }
+                
+                // 如果目录受限，使用警告样式
+                if (isRestricted) {
+                  btnClass += ' opacity-75';
+                }
+              %>
+                <div class="col">
+                  <div class="card h-100 <%= isRestricted ? 'border-warning' : '' %>">
+                    <div class="card-body">
+                      <h5 class="card-title">
+                        <i class="bi <%= iconClass %> <%= isRestricted ? 'text-warning' : '' %>"></i> 
+                        <%= titleText || rootPath %>
+                      </h5>
+                      <% if (isRestricted) { %>
+                        <div class="alert alert-warning py-1 mt-2 mb-2">
+                          <small>
+                            <i class="bi bi-exclamation-triangle-fill"></i> 
+                            权限受限
+                            <% if (errorCode === 'EACCES') { %>
+                              (需要权限)
+                            <% } %>
+                          </small>
+                        </div>
+                      <% } %>
+                      <a href="/files?path=<%= encodeURIComponent(rootPath) %>" 
+                         class="btn <%= btnClass %> w-100 mt-2 <%= isRestricted ? 'text-white' : '' %>">
+                        浏览
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <!-- Linux 常用系统目录 -->
-              <div class="col">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">
-                      <i class="bi bi-folder-fill text-warning"></i> 
-                      用户目录 (/home)
-                    </h5>
-                    <a href="/files?path=<%= encodeURIComponent('/home') %>" class="btn btn-warning w-100 mt-3">浏览</a>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">
-                      <i class="bi bi-folder-fill text-danger"></i> 
-                      应用目录 (/app)
-                    </h5>
-                    <a href="/files?path=<%= encodeURIComponent('/app') %>" class="btn btn-danger w-100 mt-3">浏览</a>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">
-                      <i class="bi bi-folder-fill text-info"></i> 
-                      系统配置 (/etc)
-                    </h5>
-                    <a href="/files?path=<%= encodeURIComponent('/etc') %>" class="btn btn-info w-100 mt-3 text-white">浏览</a>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="col">
-                <div class="card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title">
-                      <i class="bi bi-folder-fill text-secondary"></i> 
-                      可变数据 (/var)
-                    </h5>
-                    <a href="/files?path=<%= encodeURIComponent('/var') %>" class="btn btn-secondary w-100 mt-3">浏览</a>
-                  </div>
-                </div>
-              </div>
+              <% }) %>
             <% } %>
             
             <!-- 常用目录 -->

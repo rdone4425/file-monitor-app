@@ -81,7 +81,13 @@ async function startMonitoring() {
         if (changedFiles.length > 0) {
           // 准备上传文件
           const filesToUpload = changedFiles
-            .filter(file => fs.existsSync(file)) // 过滤掉已删除的文件
+            .filter(file => {
+              const exists = fs.existsSync(file);
+              if (!exists) {
+                logger.warn(`跳过不存在的文件: ${file}`);
+              }
+              return exists;
+            }) // 过滤掉已删除或不存在的文件
             .map(file => ({
               localPath: file,
               repoPath: getRelativePath(file, watchPath)
@@ -103,6 +109,8 @@ async function startMonitoring() {
                 .filter(r => !r.success)
                 .forEach(r => logger.error(`文件 ${r.file.repoPath} 上传失败: ${r.error}`));
             }
+          } else {
+            logger.warn('没有有效的文件可上传');
           }
           
           // 处理已删除的文件

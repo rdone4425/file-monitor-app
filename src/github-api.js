@@ -1,5 +1,6 @@
 import axios from 'axios';
 import fs from 'fs/promises';
+import fs_sync from 'fs';
 import path from 'path';
 import FormData from 'form-data';
 import mime from 'mime-types';
@@ -112,15 +113,36 @@ export class GitHubApiService {
    */
   async uploadFile(localFilePath, repoFilePath, message) {
     try {
+      // 检查文件是否存在
+      if (!fs_sync.existsSync(localFilePath)) {
+        logger.error(`本地文件不存在: ${localFilePath}`);
+        throw new Error(`文件不存在: ${localFilePath}`);
+      }
+
+      // 确保目标路径合法
+      const normalizedRepoPath = repoFilePath.replace(/\\/g, '/');
+      
+      // 检查路径是否包含父目录
+      const parentDir = path.dirname(normalizedRepoPath);
+      if (parentDir !== '.' && parentDir !== '/') {
+        logger.info(`文件 ${normalizedRepoPath} 包含父目录: ${parentDir}`);
+      }
+
       // 使用重试机制执行上传
       const response = await RetryHandler.executeWithRetry(
         async () => {
           // 读取文件内容
-          const content = await fs.readFile(localFilePath);
+          let content;
+          try {
+            content = await fs.readFile(localFilePath);
+          } catch (readError) {
+            logger.error(`读取文件失败: ${localFilePath}, 错误: ${readError.message}`);
+            throw new Error(`无法读取文件: ${readError.message}`);
+          }
           const base64Content = content.toString('base64');
 
           // 获取文件的当前 SHA（如果存在）
-          const { sha } = await this.getFileContent(repoFilePath);
+          const { sha } = await this.getFileContent(normalizedRepoPath);
 
           // 构建请求体
           const requestBody = {
@@ -136,7 +158,7 @@ export class GitHubApiService {
 
           // 发送请求
           return await axios.put(
-            `${this.baseUrl}/repos/${this.username}/${this.repo}/contents/${encodeURIComponent(repoFilePath)}`,
+            `${this.baseUrl}/repos/${this.username}/${this.repo}/contents/${encodeURIComponent(normalizedRepoPath)}`,
             requestBody,
             { headers: this.headers }
           );
@@ -193,6 +215,83 @@ export class GitHubApiService {
       return response.data;
     } catch (error) {
       logger.error(`删除文件失败 ${filePath}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取用户的仓库列表
+   * @param {number} page - 页码
+   * @param {number} perPage - 每页数量
+   * @returns {Promise<Array>} - 仓库列表
+   */
+  async getUserRepos(page = 1, perPage = 100) {
+    try {
+      const response = await RetryHandler.executeWithRetry(
+        () => axios.get(`${this.baseUrl}/user/repos`, { 
+          headers: this.headers,
+          params: {
+            page,
+            per_page: perPage,
+            sort: 'updated',
+            direction: 'desc'
+          }
+        }),
+        {
+          maxRetries: 2,
+          baseDelay: 1000,
+          retryCondition: RetryHandler.githubRetryCondition
+        }
+      );
+
+      logger.info(`成功获取用户仓库列表，共 ${response.data.length} 个仓库`);
+      
+      // 提取需要的仓库信息
+      const repos = response.data.map(repo => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        description: repo.description,
+        private: repo.private,
+        html_url: repo.html_url,
+        default_branch: repo.default_branch,
+        created_at: repo.created_at,
+        updated_at: repo.updated_at,
+        branches_url: repo.branches_url.replace('{/branch}', ''),
+        owner: {
+          login: repo.owner.login,
+          avatar_url: repo.owner.avatar_url
+        }
+      }));
+      
+      return repos;
+    } catch (error) {
+      const errorReport = ErrorClassifier.generateReport(error);
+      logger.error(`获取用户仓库列表失败:\n${errorReport}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * 获取仓库的分支列表
+   * @param {string} repoName - 仓库名称
+   * @returns {Promise<Array>} - 分支列表
+   */
+  async getRepoBranches(repoName) {
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/repos/${this.username}/${repoName}/branches`,
+        { headers: this.headers }
+      );
+      
+      logger.info(`成功获取仓库 ${repoName} 的分支列表，共 ${response.data.length} 个分支`);
+      
+      return response.data.map(branch => ({
+        name: branch.name,
+        commit: branch.commit.sha
+      }));
+    } catch (error) {
+      logger.error(`获取仓库分支列表失败: ${error.message}`);
       throw error;
     }
   }
